@@ -1,18 +1,19 @@
 syntax: glob
 
-*~
-*.o
 *.log
-Makefile
-Makefile.in
-configure
+*.o
+*~
+.deps
+.dirstamp
+aclocal.m4
 autom4te.cache
+build-aux
+compile_flags.txt
 config.h
 config.h.in
 config.status
-compile_flags.txt
-build-aux
-aclocal.m4
+configure
+Makefile
+Makefile.in
+sdl2-gamecontroller-test
 stamp-h1
-.deps
-.dirstamp

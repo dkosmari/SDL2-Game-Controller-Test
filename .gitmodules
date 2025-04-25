@@ -1,0 +1,3 @@
+[submodule "external/sdl2xx"]
+	path = external/sdl2xx
+	url = https://github.com/dkosmari/sdl2xx.git
