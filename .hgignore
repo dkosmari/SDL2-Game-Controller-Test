@@ -13,7 +13,9 @@ config.h
 config.h.in
 config.status
 configure
+lib*.a
 Makefile
 Makefile.in
 sdl2-gamecontroller-test
 stamp-h1
+imgui.ini

@@ -10,12 +10,17 @@ AC_CONFIG_AUX_DIR([build-aux])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
-# Checks for programs.
+AC_PROG_RANLIB
+
 AC_PROG_CXX
 AX_APPEND_COMPILE_FLAGS([-std=c++23], [CXX])
 AC_LANG([C++])
 
-PKG_CHECK_MODULES([SDL2], [sdl2])
+PKG_CHECK_MODULES([SDL2], [sdl2 SDL2_ttf])
+
+
+AX_SUBDIRS_CONFIGURE([external/sdl2xx])
+
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
