@@ -1,0 +1,130 @@
+#include <filesystem>
+#include <iostream>
+
+#include <imgui.h>
+#include <backends/imgui_impl_sdl2.h>
+#include <backends/imgui_impl_sdlrenderer2.h>
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include "App.hpp"
+
+#include "JoystickListWindow.hpp"
+
+using std::filesystem::path;
+using std::cout;
+using std::cerr;
+using std::endl;
+
+using namespace sdl::literals;
+
+path assets_path = "assets";
+
+
+App::App() :
+    sdl_init{ sdl::init::flag::video | sdl::init::flag::game_controller },
+    window{
+        PACKAGE_NAME,
+        sdl::window::pos_undefined,
+        {1280, 720},
+        sdl::window::flag::resizable
+    },
+    renderer{
+        window,
+        -1,
+        sdl::renderer::flag::accelerated | sdl::renderer::flag::present_vsync
+    }
+{
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
+    auto& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+    io.Fonts->AddFontFromFileTTF((assets_path / "LiberationSans-Regular.ttf").c_str(),
+                                 20, nullptr, nullptr);
+
+    ImGui_ImplSDL2_InitForSDLRenderer(window.data(), renderer.data());
+    ImGui_ImplSDLRenderer2_Init(renderer.data());
+
+    windows.push_back(std::make_unique<JoystickListWindow>());
+}
+
+
+App::~App()
+{
+    ImGui_ImplSDLRenderer2_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+}
+
+
+int
+App::run()
+{
+    try {
+        running = true;
+        while (running) {
+            draw();
+            process_events();
+        }
+        return 0;
+    }
+    catch (...) {
+        cerr << "Exception while running!" << endl;
+        throw;
+    }
+}
+
+
+void
+App::draw()
+{
+    ImGui_ImplSDLRenderer2_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
+    // gui code goes here
+    process_ui();
+
+    ImGui::EndFrame();
+    ImGui::Render();
+
+    renderer.set_color(0x101010_rgb);
+    renderer.clear();
+    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer.data());
+
+    renderer.present();
+}
+
+
+void
+App::process_ui()
+{
+    for (auto& w : windows)
+        w->process(*this);
+}
+
+
+void
+App::process_events()
+{
+    while (auto event = sdl::events::poll()) {
+
+        ImGui_ImplSDL2_ProcessEvent(&*event);
+
+        for (auto& w : windows)
+            w->handle(*event);
+
+        switch (event->type) {
+
+            case SDL_QUIT:
+                running = false;
+                break;
+
+        }
+
+    }
+}

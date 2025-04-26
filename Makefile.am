@@ -36,7 +36,10 @@ libimgui_a_CPPFLAGS = \
 bin_PROGRAMS = sdl2-gamecontroller-test
 
 sdl2_gamecontroller_test_SOURCES = \
-	src/main.cpp
+	src/App.cpp src/App.hpp \
+	src/JoystickListWindow.cpp src/JoystickListWindow.hpp \
+	src/main.cpp \
+	src/Window.hpp
 
 sdl2_gamecontroller_test_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
