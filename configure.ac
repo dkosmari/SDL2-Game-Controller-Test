@@ -16,10 +16,11 @@ AC_PROG_CXX
 AX_APPEND_COMPILE_FLAGS([-std=c++23], [CXX])
 AC_LANG([C++])
 
-PKG_CHECK_MODULES([SDL2], [sdl2 SDL2_ttf])
+PKG_CHECK_MODULES([SDL2], [sdl2])
 
 
-AX_SUBDIRS_CONFIGURE([external/sdl2xx])
+AX_SUBDIRS_CONFIGURE([external/sdl2xx],
+                     [[--disable-examples],[--disable-mixer],[--disable-image],[--disable-ttf]])
 
 
 AC_CONFIG_FILES([Makefile])

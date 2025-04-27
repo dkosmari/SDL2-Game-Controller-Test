@@ -1,5 +1,6 @@
 SUBDIRS = \
-	external/sdl2xx \
+	$(subdirs) \
+	$(subdirs_extra) \
 	.
 
 
@@ -48,7 +49,6 @@ sdl2_gamecontroller_test_CPPFLAGS = \
 
 sdl2_gamecontroller_test_LDADD = \
 	libimgui.a \
-	external/sdl2xx/libsdl2xx_ttf.a \
 	external/sdl2xx/libsdl2xx.a
 
 
