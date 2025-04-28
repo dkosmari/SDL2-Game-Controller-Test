@@ -2,9 +2,11 @@
 #define JOYSTICKLISTWINDOW_HPP
 
 #include <map>
+#include <memory>
+#include <set>
 #include <string>
 
-#include <SDL.h>
+#include <sdl2xx/joysticks.hpp>
 
 #include "Window.hpp"
 
@@ -12,36 +14,55 @@
 struct JoystickListWindow : Window {
 
     struct Info {
-        unsigned index;
         std::string name;
-        int player;
         std::string joy_path;
         Uint16 vendor;
         Uint16 product;
-        Uint16 version;
-        SDL_JoystickType type;
-        SDL_JoystickID instance;
+        sdl::joysticks::instance_id id;
+        sdl::guid guid;
+
+        std::unique_ptr<Window> window;
     };
 
 
-    std::map<SDL_JoystickID, Info> joysticks;
+    std::map<sdl::joysticks::instance_id, Info> joysticks;
+
+    std::set<sdl::joysticks::instance_id> pending_close;
 
 
     ~JoystickListWindow()
         noexcept override;
 
     void
-    process(App& app)
+    process()
         override;
 
     void
-    handle(sdl::events::event& e);
+    handle(const sdl::events::event& e)
+        override;
 
     void
-    add(Sint32 index);
+    add(unsigned index);
 
     void
-    remove(Sint32 id);
+    remove(sdl::joysticks::instance_id id);
+
+
+    void
+    open(sdl::joysticks::instance_id id);
+
+
+    void
+    close(sdl::joysticks::instance_id id);
+
+
+    void
+    close_later(sdl::joysticks::instance_id id);
+
+
+    void
+    process_close_later();
+
 };
 
 #endif

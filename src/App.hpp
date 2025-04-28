@@ -17,7 +17,7 @@ struct App {
     sdl::init sdl_init;
     sdl::window window;
     sdl::renderer renderer;
-    std::vector<std::unique_ptr<Window>> windows;
+    std::vector<std::unique_ptr<Window>> children;
     bool running = false;
 
 

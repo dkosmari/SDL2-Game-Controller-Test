@@ -11,7 +11,10 @@ LIBS = $(SDL2_LIBS)
 AM_CXXFLAGS = -Wall -Wextra -Werror
 
 
-noinst_LIBRARIES = libimgui.a
+noinst_LIBRARIES = \
+	libimgui.a \
+	libimplot.a
+
 
 libimgui_a_SOURCES = \
 	external/imgui/backends/imgui_impl_sdl2.cpp \
@@ -34,20 +37,34 @@ libimgui_a_CPPFLAGS = \
 	-Iexternal/imgui
 
 
+libimplot_a_SOURCES = \
+	external/implot/implot.cpp \
+	external/implot/implot.h \
+	external/implot/implot_internal.h \
+	external/implot/implot_items.cpp
+
+libimplot_a_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	-Iexternal/imgui
+
+
 bin_PROGRAMS = sdl2-gamecontroller-test
 
 sdl2_gamecontroller_test_SOURCES = \
 	src/App.cpp src/App.hpp \
 	src/JoystickListWindow.cpp src/JoystickListWindow.hpp \
+	src/JoystickWindow.cpp src/JoystickWindow.hpp \
 	src/main.cpp \
 	src/Window.hpp
 
 sdl2_gamecontroller_test_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-Iexternal/sdl2xx/include \
-	-Iexternal/imgui
+	-Iexternal/imgui \
+	-Iexternal/implot
 
 sdl2_gamecontroller_test_LDADD = \
+	libimplot.a \
 	libimgui.a \
 	external/sdl2xx/libsdl2xx.a
 

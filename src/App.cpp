@@ -5,6 +5,8 @@
 #include <backends/imgui_impl_sdl2.h>
 #include <backends/imgui_impl_sdlrenderer2.h>
 
+#include <implot.h>
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -24,11 +26,11 @@ path assets_path = "assets";
 
 
 App::App() :
-    sdl_init{ sdl::init::flag::video | sdl::init::flag::game_controller },
+    sdl_init{ sdl::init::flag::video | sdl::init::flag::joystick },
     window{
         PACKAGE_NAME,
         sdl::window::pos_undefined,
-        {1280, 720},
+        {1600, 900},
         sdl::window::flag::resizable
     },
     renderer{
@@ -39,6 +41,7 @@ App::App() :
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
 
     auto& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -49,7 +52,7 @@ App::App() :
     ImGui_ImplSDL2_InitForSDLRenderer(window.data(), renderer.data());
     ImGui_ImplSDLRenderer2_Init(renderer.data());
 
-    windows.push_back(std::make_unique<JoystickListWindow>());
+    children.push_back(std::make_unique<JoystickListWindow>());
 }
 
 
@@ -57,6 +60,8 @@ App::~App()
 {
     ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
+
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
 }
 
@@ -103,8 +108,8 @@ App::draw()
 void
 App::process_ui()
 {
-    for (auto& w : windows)
-        w->process(*this);
+    for (auto& c : children)
+        c->process();
 }
 
 
@@ -115,8 +120,8 @@ App::process_events()
 
         ImGui_ImplSDL2_ProcessEvent(&*event);
 
-        for (auto& w : windows)
-            w->handle(*event);
+        for (auto& c : children)
+            c->handle(*event);
 
         switch (event->type) {
 
