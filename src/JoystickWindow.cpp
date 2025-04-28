@@ -1,3 +1,6 @@
+#include <chrono>
+#include <iostream>
+
 #include <SDL_timer.h>
 
 #include <imgui.h>
@@ -11,6 +14,11 @@
 // #define DEBUG_BALLS
 
 // #define DEBUG_HATS
+
+using std::cout;
+using std::endl;
+
+using namespace std::literals;
 
 
 namespace {
@@ -53,12 +61,14 @@ JoystickWindow::JoystickWindow(JoystickListWindow* parent,
     parent{parent},
     joy{index},
     id{joy.get_instance()},
-    name{joy.get_name()},
+    name{joy.try_get_name().value_or(nullptr)},
     player{joy.get_player_index()},
-    path{joy.get_path()},
+    path{joy.try_get_path().value_or(nullptr)},
     vendor{joy.get_vendor()},
     product{joy.get_product()},
     version{joy.get_product_version()},
+    firmware{joy.get_firmware_version()},
+    serial{joy.try_get_serial().value_or(nullptr)},
     type{joy.get_type()},
     guid{joy.get_guid()}
 {
@@ -119,16 +129,31 @@ JoystickWindow::process()
 {
     update_history();
 
-    if (ImGui::Begin(("Joystick: " + name).c_str(),
+    if (ImGui::Begin(("Joystick: "s + name).c_str(),
                      &is_open)) {
 
-        ImGui::Text("Name: %s", name.data());
+        if (name) {
+            ImGui::Text("Name:");
+            ImGui::Indent();
+            ImGui::Text("%s", name);
+            ImGui::Unindent();
+        }
         ImGui::Text("Instance: %d", id);
-        ImGui::Text("Player: %d", player);
-        ImGui::Text("Path: %s", path.data());
+        if (path)
+            ImGui::Text("Path: %s", path);
         ImGui::Text("VID:PID: %04x:%04x (%04x)", vendor, product, version);
+        if (firmware)
+            ImGui::Text("Firmware: %04x", firmware);
+        if (serial)
+            ImGui::Text("Serial: %s", serial);
         ImGui::Text("Type: %s", to_string(type).data());
         ImGui::Text("GUID: %s", to_string(guid).data());
+
+        {
+            int p = joy.get_player_index();
+            if (ImGui::InputInt("Player", &p))
+                joy.set_player_index(p);
+        }
 
         // Plot axes.
         if (!axis_histories.empty()) {
@@ -174,24 +199,18 @@ JoystickWindow::process()
                 ImPlot::SetupAxes("X", "Y",
                                   ImPlotAxisFlags_AutoFit,
                                   ImPlotAxisFlags_AutoFit);
-                // ImPlot::SetupAxesLimits(sdl::joysticks::axis_min,
-                //                         sdl::joysticks::axis_max,
-                //                         sdl::joysticks::axis_min,
-                //                         sdl::joysticks::axis_max,
-                //                         ImPlotCond_Always);
                 ImPlot::SetupFinish();
 
                 for (std::size_t i = 0; i < ball_histories.size(); ++i) {
                     auto& history = ball_histories[i];
                     if (!history.empty()) {
                         std::string label = "Ball " + std::to_string(i);
-                        // ImPlot::SetNextMarkerStyle(ImPlotMarker_Cross);
                         ImPlot::PlotLine(label.data(),
                                          &history[0].x,
                                          &history[0].y,
                                          history.size(),
-                                         0, // ImPlotScatterFlags
-                                         0, // offset
+                                         0,
+                                         0,
                                          sizeof history[0]);
                     }
                 }
@@ -239,6 +258,8 @@ JoystickWindow::process()
         // Show buttons.
         if (!current_button.empty()) {
             ImGui::Text("Buttons");
+            ImGui::BeginGroup();
+            ImGui::Indent();
             ImGui::BeginDisabled(true);
             for (std::size_t i = 0; i < current_button.size(); ++i) {
                 if (i > 0 && (i % 10 != 0))
@@ -248,12 +269,36 @@ JoystickWindow::process()
                 ImGui::RadioButton(label.data(), value);
             }
             ImGui::EndDisabled();
+            ImGui::Unindent();
+            ImGui::EndGroup();
         }
 
         // Show battery.
         ImGui::Text("Battery: %s", to_string(battery).data());
 
 
+        // Show rumble.
+        ImGui::BeginDisabled(!joy.has_rumble());
+        if (ImGui::Button("Rumble"))
+            joy.rumble(128, 0, 250ms);
+        ImGui::EndDisabled();
+
+        ImGui::SameLine();
+
+        ImGui::BeginDisabled(!joy.has_rumble_on_triggers());
+        if (ImGui::Button("Rumble Triggers"))
+            joy.rumble_triggers(128, 128, 250ms);
+        ImGui::EndDisabled();
+
+        // Show LED
+        ImGui::BeginDisabled(!joy.has_led());
+        {
+            if (ImGui::ColorEdit3("LED",
+                                  led_rgb,
+                                  ImGuiColorEditFlags_NoAlpha))
+                joy.set_led(sdl::color::from_rgb(led_rgb[0], led_rgb[1], led_rgb[3]));
+        }
+        ImGui::EndDisabled();
     }
     ImGui::End();
 

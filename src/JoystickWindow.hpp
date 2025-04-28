@@ -20,14 +20,17 @@ struct JoystickWindow : Window {
     sdl::joysticks::joystick joy;
 
     sdl::joysticks::instance_id id;
-    std::string name;
+    const char* name;
     int player;
-    std::string path;
+    const char* path;
     Uint16 vendor;
     Uint16 product;
     Uint16 version;
+    Uint16 firmware;
+    const char* serial;
     sdl::joysticks::type type;
     sdl::guid guid;
+    float led_rgb[3] = {1, 1, 1};
 
     bool is_open = true;
 
