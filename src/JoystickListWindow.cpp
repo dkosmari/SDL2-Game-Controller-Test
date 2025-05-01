@@ -12,32 +12,31 @@ JoystickListWindow::~JoystickListWindow()
 void
 JoystickListWindow::process()
 {
-    if (ImGui::Begin("Joysticks",
-                     nullptr,
-                     ImGuiWindowFlags_HorizontalScrollbar)) {
+    ImGui::SetNextWindowSize({800, 200}, ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Joysticks")) {
 
-        ImGui::BeginTable("joystick_table", 5, ImGuiTableFlags_Resizable);
-        ImGui::TableSetupColumn("-");
+        ImGui::BeginTable("joystick_list", 5);
+        ImGui::TableSetupColumn("##open_button", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("VID:PID");
-        ImGui::TableSetupColumn("Instance");
+        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("VID:PID", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("Inst.", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow();
 
         for (auto& [key, val] : joysticks) {
             ImGui::TableNextRow();
 
-            ImGui::PushID(to_string(val.guid).data());
+            ImGui::PushID(val.id);
 
             ImGui::TableNextColumn();
             if (ImGui::Button("Open"))
                 open(key);
 
             ImGui::TableNextColumn();
-            ImGui::Text("%s", val.name.data());
+            ImGui::TextUnformatted(val.name.data());
 
             ImGui::TableNextColumn();
-            ImGui::Text("%s", val.joy_path.data());
+            ImGui::TextUnformatted(val.path.data());
 
             ImGui::TableNextColumn();
             ImGui::Text("%04x:%04x", val.vendor, val.product);
@@ -89,12 +88,12 @@ JoystickListWindow::add(unsigned index)
 
     Info info;
 
-    info.name     = js::get_name(index);
-    info.joy_path = js::get_path(index);
-    info.vendor   = js::get_vendor(index);
-    info.product  = js::get_product(index);
-    info.id       = js::get_instance(index);
-    info.guid     = js::get_guid(index);
+    info.name    = js::try_get_name(index).value_or("<NONE>");
+    info.path    = js::try_get_path(index).value_or("<NONE>");
+    info.vendor  = js::get_vendor(index);
+    info.product = js::get_product(index);
+    info.id      = js::get_id(index);
+    info.guid    = js::get_guid(index);
 
     joysticks[info.id] = std::move(info);
 }
@@ -116,7 +115,7 @@ JoystickListWindow::open(sdl::joysticks::instance_id id)
     unsigned n = js::get_num_joysticks();
     unsigned index = n;
     for (unsigned i = 0; i < n; ++i) {
-        if (js::get_instance(i) == info.id) {
+        if (js::get_id(i) == info.id) {
             index = i;
             break;
         }

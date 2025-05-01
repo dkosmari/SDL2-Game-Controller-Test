@@ -25,6 +25,9 @@ using namespace sdl::literals;
 path assets_path = "assets";
 
 
+ImVector<ImWchar> glyph_ranges;
+
+
 App::App() :
     sdl_init{ sdl::init::flag::video | sdl::init::flag::joystick },
     window{
@@ -46,8 +49,16 @@ App::App() :
     auto& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-    io.Fonts->AddFontFromFileTTF((assets_path / "LiberationSans-Regular.ttf").c_str(),
-                                 20, nullptr, nullptr);
+    ImFontGlyphRangesBuilder builder;
+    builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+    builder.AddText("•←↑→↓↖↗↘↙");
+    builder.BuildRanges(&glyph_ranges);
+
+    io.Fonts->AddFontFromFileTTF((assets_path / "DejaVuSans.ttf").c_str(),
+                                 22,
+                                 nullptr,
+                                 glyph_ranges.Data);
+
 
     ImGui_ImplSDL2_InitForSDLRenderer(window.data(), renderer.data());
     ImGui_ImplSDLRenderer2_Init(renderer.data());

@@ -25,6 +25,9 @@ namespace {
 
     const unsigned max_history = 60 * 5;
 
+    const ImVec4 key_color = {1.0, 1.0, 0.5, 1.0};
+
+
     sdl::vec2
     to_pos(sdl::joysticks::hat_dir dir)
     {
@@ -60,14 +63,13 @@ JoystickWindow::JoystickWindow(JoystickListWindow* parent,
                                unsigned index) :
     parent{parent},
     joy{index},
-    id{joy.get_instance()},
-    name{joy.try_get_name().value_or(nullptr)},
-    player{joy.get_player_index()},
-    path{joy.try_get_path().value_or(nullptr)},
+    id{joy.get_id()},
+    name{joy.try_get_name().value_or("<NONE>")},
+    path{joy.try_get_path().value_or("<NONE>")},
     vendor{joy.get_vendor()},
     product{joy.get_product()},
-    version{joy.get_product_version()},
-    firmware{joy.get_firmware_version()},
+    version{joy.get_version()},
+    firmware{joy.get_firmware()},
     serial{joy.try_get_serial().value_or(nullptr)},
     type{joy.get_type()},
     guid{joy.get_guid()}
@@ -129,181 +131,316 @@ JoystickWindow::process()
 {
     update_history();
 
-    if (ImGui::Begin(("Joystick: "s + name).c_str(),
-                     &is_open)) {
+    ImGui::SetNextWindowSize({500, 500}, ImGuiCond_FirstUseEver);
+    std::string title = "Joystick: "s + name + "##"s + std::to_string(id);
+    if (ImGui::Begin(title.data(), &is_open)) {
 
-        if (name) {
-            ImGui::Text("Name:");
-            ImGui::Indent();
-            ImGui::Text("%s", name);
-            ImGui::Unindent();
-        }
-        ImGui::Text("Instance: %d", id);
-        if (path)
-            ImGui::Text("Path: %s", path);
-        ImGui::Text("VID:PID: %04x:%04x (%04x)", vendor, product, version);
-        if (firmware)
-            ImGui::Text("Firmware: %04x", firmware);
-        if (serial)
-            ImGui::Text("Serial: %s", serial);
-        ImGui::Text("Type: %s", to_string(type).data());
-        ImGui::Text("GUID: %s", to_string(guid).data());
+        ImGui::BeginTabBar("main_items");
 
-        {
-            int p = joy.get_player_index();
-            if (ImGui::InputInt("Player", &p))
-                joy.set_player_index(p);
+        if (ImGui::BeginTabItem("Details")) {
+            show_details();
+            ImGui::EndTabItem();
         }
 
-        // Plot axes.
-        if (!axis_histories.empty()) {
-            if (ImPlot::BeginPlot("Axes",
-                                  {-1, 0},
-                                  ImPlotFlags_NoInputs)) {
-
-                ImPlot::SetupAxes("Time", "Value",
-                                  ImPlotAxisFlags_RangeFit
-                                  | ImPlotAxisFlags_NoLabel
-                                  | ImPlotAxisFlags_NoTickLabels,
-                                  ImPlotAxisFlags_RangeFit);
-                ImPlot::SetupAxisLimits(ImAxis_X1,
-                                        0,
-                                        max_history - 1,
-                                        ImPlotCond_Always);
-                ImPlot::SetupAxisLimits(ImAxis_Y1,
-                                        sdl::joysticks::axis_min - 1024,
-                                        sdl::joysticks::axis_max + 1024,
-                                        ImPlotCond_Always);
-                ImPlot::SetupFinish();
-
-                for (std::size_t i = 0; i < axis_histories.size(); ++i) {
-                    auto& history = axis_histories[i];
-                    if (!history.empty()) {
-                        std::string label = "Axis " + std::to_string(i);
-                        ImPlot::PlotLine(label.data(),
-                                         &history[0],
-                                         history.size());
-                    }
-                }
-
-                ImPlot::EndPlot();
-            }
+        if (ImGui::BeginTabItem("Axes")) {
+            show_axes();
+            ImGui::EndTabItem();
         }
 
-        // Plot balls.
-        if (!ball_histories.empty()) {
-            if (ImPlot::BeginPlot("Balls",
-                                  {-1, 0},
-                                  ImPlotFlags_NoInputs)) {
-
-                ImPlot::SetupAxes("X", "Y",
-                                  ImPlotAxisFlags_AutoFit,
-                                  ImPlotAxisFlags_AutoFit);
-                ImPlot::SetupFinish();
-
-                for (std::size_t i = 0; i < ball_histories.size(); ++i) {
-                    auto& history = ball_histories[i];
-                    if (!history.empty()) {
-                        std::string label = "Ball " + std::to_string(i);
-                        ImPlot::PlotLine(label.data(),
-                                         &history[0].x,
-                                         &history[0].y,
-                                         history.size(),
-                                         0,
-                                         0,
-                                         sizeof history[0]);
-                    }
-                }
-
-                ImPlot::EndPlot();
-            }
+        if (ImGui::BeginTabItem("Balls")) {
+            show_balls();
+            ImGui::EndTabItem();
         }
 
-        // Plot hats.
-        if (!current_hat.empty()) {
-            if (ImPlot::BeginPlot("Hats",
-                                  {-1, 0},
-                                  ImPlotFlags_NoInputs)) {
-
-                auto flags =
-                    ImPlotAxisFlags_RangeFit |
-                    ImPlotAxisFlags_NoLabel |
-                    ImPlotAxisFlags_NoTickLabels |
-                    ImPlotAxisFlags_NoTickMarks |
-                    ImPlotAxisFlags_NoGridLines;
-                ImPlot::SetupAxes("X", "Y", flags, flags);
-                ImPlot::SetupAxesLimits(-1.5, 1.5,
-                                        -1.5, 1.5,
-                                        ImPlotCond_Always);
-                ImPlot::SetupFinish();
-
-                for (std::size_t i = 0; i < current_hat.size(); ++i) {
-                    std::string label = "Hat " + std::to_string(i);
-                    ImPlot::SetNextMarkerStyle(ImPlotMarker_Diamond,
-                                               16);
-                    auto pos = to_pos(current_hat[i]);
-                    ImPlot::PlotScatter(label.data(),
-                                        &pos.x,
-                                        &pos.y,
-                                        1,
-                                        0, // ImPlotScatterFlags
-                                        0, // offset
-                                        sizeof pos);
-                }
-
-                ImPlot::EndPlot();
-            }
+        if (ImGui::BeginTabItem("Hats")) {
+            show_hats();
+            ImGui::EndTabItem();
         }
 
-        // Show buttons.
-        if (!current_button.empty()) {
-            ImGui::Text("Buttons");
-            ImGui::BeginGroup();
-            ImGui::Indent();
-            ImGui::BeginDisabled(true);
-            for (std::size_t i = 0; i < current_button.size(); ++i) {
-                if (i > 0 && (i % 10 != 0))
-                    ImGui::SameLine();
-                std::string label = "##" + std::to_string(i);
-                bool value = current_button[i];
-                ImGui::RadioButton(label.data(), value);
-            }
-            ImGui::EndDisabled();
-            ImGui::Unindent();
-            ImGui::EndGroup();
+        if (ImGui::BeginTabItem("Buttons")) {
+            show_buttons();
+            ImGui::EndTabItem();
         }
 
-        // Show battery.
-        ImGui::Text("Battery: %s", to_string(battery).data());
-
-
-        // Show rumble.
-        ImGui::BeginDisabled(!joy.has_rumble());
-        if (ImGui::Button("Rumble"))
-            joy.rumble(128, 0, 250ms);
-        ImGui::EndDisabled();
-
-        ImGui::SameLine();
-
-        ImGui::BeginDisabled(!joy.has_rumble_on_triggers());
-        if (ImGui::Button("Rumble Triggers"))
-            joy.rumble_triggers(128, 128, 250ms);
-        ImGui::EndDisabled();
-
-        // Show LED
-        ImGui::BeginDisabled(!joy.has_led());
-        {
-            if (ImGui::ColorEdit3("LED",
-                                  led_rgb,
-                                  ImGuiColorEditFlags_NoAlpha))
-                joy.set_led(sdl::color::from_rgb(led_rgb[0], led_rgb[1], led_rgb[3]));
+        if (ImGui::BeginTabItem("Extras")) {
+        show_extras();
+            ImGui::EndTabItem();
         }
-        ImGui::EndDisabled();
+
+        ImGui::EndTabBar();
     }
     ImGui::End();
 
     if (!is_open)
         parent->close_later(id);
+}
+
+
+void
+JoystickWindow::show_details()
+{
+    if (ImGui::BeginTable("Details", 2)) {
+
+        ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        ImGui::TextColored(key_color, "Name");
+        ImGui::TableNextColumn();
+        if (name)
+            ImGui::TextUnformatted(name);
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "Instance");
+        ImGui::TableNextColumn();
+        ImGui::Text("%d", id);
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "Path");
+        ImGui::TableNextColumn();
+        if (path)
+            ImGui::TextUnformatted(path);
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "VID:PID");
+        ImGui::TableNextColumn();
+        ImGui::Text("%04x:%04x (%04x)", vendor, product, version);
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "Firmware");
+        ImGui::TableNextColumn();
+        ImGui::Text("%04x", firmware);
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "Serial");
+        ImGui::TableNextColumn();
+        if (serial)
+            ImGui::TextUnformatted(serial);
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "Type");
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", to_string(type).data());
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "GUID");
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", to_string(guid).data());
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "Player");
+        ImGui::TableNextColumn();
+        {
+            int p = joy.get_player();
+            if (ImGui::InputInt("##Player", &p))
+                joy.set_player(p);
+        }
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "Battery");
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", to_string(battery).data());
+
+
+        ImGui::EndTable();
+    }
+}
+
+
+void
+JoystickWindow::show_axes()
+{
+    if (axis_histories.empty())
+        return;
+
+    if (ImPlot::BeginPlot("Axes", {-1, -1}, ImPlotFlags_NoInputs)) {
+
+        ImPlot::SetupAxes("Time", "Value",
+                          ImPlotAxisFlags_RangeFit
+                          | ImPlotAxisFlags_NoLabel
+                          | ImPlotAxisFlags_NoTickLabels,
+                          ImPlotAxisFlags_RangeFit);
+        ImPlot::SetupAxisLimits(ImAxis_X1,
+                                0,
+                                max_history - 1,
+                                ImPlotCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_Y1,
+                                sdl::joysticks::axis_min - 1024,
+                                sdl::joysticks::axis_max + 1024,
+                                ImPlotCond_Always);
+        ImPlot::SetupFinish();
+
+        for (std::size_t i = 0; i < axis_histories.size(); ++i) {
+            auto& history = axis_histories[i];
+            if (!history.empty()) {
+                std::string label = "Axis " + std::to_string(i);
+                ImPlot::PlotLine(label.data(),
+                                 &history[0],
+                                 history.size());
+            }
+        }
+
+        ImPlot::EndPlot();
+    }
+}
+
+
+void
+JoystickWindow::show_balls()
+{
+    if (ball_histories.empty())
+        return;
+
+    if (ImPlot::BeginPlot("Balls", {-1, -1}, ImPlotFlags_NoInputs)) {
+
+        ImPlot::SetupAxes("X", "Y",
+                          ImPlotAxisFlags_AutoFit,
+                          ImPlotAxisFlags_AutoFit);
+        ImPlot::SetupFinish();
+
+        for (std::size_t i = 0; i < ball_histories.size(); ++i) {
+            auto& history = ball_histories[i];
+            if (!history.empty()) {
+                std::string label = "Ball " + std::to_string(i);
+                ImPlot::PlotLine(label.data(),
+                                 &history[0].x,
+                                 &history[0].y,
+                                 history.size(),
+                                 0,
+                                 0,
+                                 sizeof history[0]);
+            }
+        }
+
+        ImPlot::EndPlot();
+    }
+}
+
+
+// HACK: there's no way to detect a plot item is hidden, so we peek inside implot_items.cpp
+namespace ImPlot {
+    bool
+    IsItemHidden(const char* label_id);
+}
+
+
+void
+JoystickWindow::show_hats()
+{
+    if (current_hat.empty())
+        return;
+
+    if (ImPlot::BeginPlot("Hats", {-1, -1}, ImPlotFlags_NoInputs)) {
+
+        auto flags =
+            ImPlotAxisFlags_RangeFit |
+            ImPlotAxisFlags_NoLabel |
+            ImPlotAxisFlags_NoTickLabels |
+            ImPlotAxisFlags_NoTickMarks |
+            ImPlotAxisFlags_NoGridLines;
+        ImPlot::SetupAxes("X", "Y", flags, flags);
+        ImPlot::SetupAxesLimits(-1.5, 1.5,
+                                -1.5, 1.5,
+                                ImPlotCond_Always);
+        ImPlot::SetupFinish();
+
+        for (std::size_t i = 0; i < current_hat.size(); ++i) {
+            std::string label = "Hat " + std::to_string(i);
+            auto h = current_hat[i];
+            auto pos = to_pos(h);
+
+            bool has_direction = h != sdl::joysticks::hat_dir::centered;
+            ImPlot::SetNextMarkerStyle(has_direction
+                                       ? ImPlotMarker_Diamond
+                                       : ImPlotMarker_Circle,
+                                       has_direction
+                                       ? ImGui::GetFontSize() / 1.5
+                                       : ImGui::GetFontSize() / 3.0);
+            ImPlot::PlotScatter(label.data(),
+                                &pos.x,
+                                &pos.y,
+                                1,
+                                0, // ImPlotScatterFlags
+                                0, // offset
+                                sizeof pos);
+
+            if (!ImPlot::IsItemHidden(label.data()) && has_direction) {
+                ImPlot::PlotText(to_string(h).data(),
+                                 pos.x,
+                                 pos.y);
+            }
+        }
+
+        ImPlot::EndPlot();
+    }
+}
+
+
+void
+JoystickWindow::show_buttons()
+{
+    if (current_button.empty())
+        return;
+
+    ImGui::BeginDisabled(true);
+    for (std::size_t i = 0; i < current_button.size(); ++i) {
+        if (i > 0 && (i % 10 != 0))
+            ImGui::SameLine();
+        std::string label = "##" + std::to_string(i);
+        bool value = current_button[i];
+        ImGui::RadioButton(label.data(), value);
+    }
+    ImGui::EndDisabled();
+}
+
+
+void
+JoystickWindow::show_extras()
+{
+    ImGui::TextColored(key_color, "Rumble");
+    ImGui::Indent();
+    ImGui::BeginDisabled(!joy.has_rumble());
+    if (ImGui::Button("Low Freq"))
+        joy.rumble(0xffff, 0, 250ms);
+    ImGui::SameLine();
+    if (ImGui::Button("High Freq"))
+        joy.rumble(0, 0xffff, 250ms);
+    ImGui::EndDisabled();
+
+    ImGui::BeginDisabled(!joy.has_rumble_on_triggers());
+    if (ImGui::Button("Left Trigger"))
+        joy.rumble_triggers(0xffff, 0, 250ms);
+    ImGui::SameLine();
+    if (ImGui::Button("Right Trigger"))
+        joy.rumble_triggers(0, 0xffff, 250ms);
+    ImGui::EndDisabled();
+    ImGui::Unindent();
+
+    ImGui::Separator();
+
+    // Show LED
+    ImGui::TextColored(key_color, "LED");
+    ImGui::Indent();
+    ImGui::BeginDisabled(!joy.has_led());
+    {
+        if (ImGui::ColorEdit3("LED",
+                              led_rgb,
+                              ImGuiColorEditFlags_NoAlpha))
+            joy.set_led(sdl::color::from_rgb(led_rgb[0], led_rgb[1], led_rgb[3]));
+    }
+    ImGui::EndDisabled();
+    ImGui::Unindent();
 }
 
 

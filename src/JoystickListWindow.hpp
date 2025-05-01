@@ -15,7 +15,7 @@ struct JoystickListWindow : Window {
 
     struct Info {
         std::string name;
-        std::string joy_path;
+        std::string path;
         Uint16 vendor;
         Uint16 product;
         sdl::joysticks::instance_id id;

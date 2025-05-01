@@ -21,7 +21,6 @@ struct JoystickWindow : Window {
 
     sdl::joysticks::instance_id id;
     const char* name;
-    int player;
     const char* path;
     Uint16 vendor;
     Uint16 product;
@@ -65,6 +64,24 @@ struct JoystickWindow : Window {
     void
     process()
         override;
+
+    void
+    show_details();
+
+    void
+    show_axes();
+
+    void
+    show_balls();
+
+    void
+    show_hats();
+
+    void
+    show_buttons();
+
+    void
+    show_extras();
 
 
     void
