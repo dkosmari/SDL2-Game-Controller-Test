@@ -2,10 +2,9 @@
 #define JOYSTICKWINDOW_HPP
 
 #include <string>
-#include <utility>
 #include <vector>
 
-#include <sdl2xx/joysticks.hpp>
+#include <sdl2xx/joystick.hpp>
 
 #include "Window.hpp"
 
@@ -15,47 +14,29 @@ struct JoystickListWindow;
 
 struct JoystickWindow : Window {
 
-    JoystickListWindow* parent = nullptr;
+    JoystickListWindow* parent;
 
-    sdl::joysticks::joystick joy;
+    sdl::joystick::instance_id id;
 
-    sdl::joysticks::instance_id id;
-    const char* name;
-    const char* path;
-    Uint16 vendor;
-    Uint16 product;
-    Uint16 version;
-    Uint16 firmware;
-    const char* serial;
-    sdl::joysticks::type type;
-    sdl::guid guid;
+    sdl::joystick::device dev;
+
     float led_rgb[3] = {1, 1, 1};
+
+    std::string mapping;
 
     bool is_open = true;
 
 
-    using axis_samples_t = std::vector<Sint16>;
-    axis_samples_t current_axis;
+    using axis_samples_t = std::vector<double>;
     std::vector<axis_samples_t> axis_histories;
 
 
     using ball_samples_t = std::vector<sdl::vec2>;
-    ball_samples_t current_ball;
     std::vector<ball_samples_t> ball_histories;
 
 
-    using hat_samples_t = std::vector<sdl::joysticks::hat_dir>;
-    hat_samples_t current_hat;
-
-
-    using button_samples_t = std::vector<bool>;
-    button_samples_t current_button;
-
-    sdl::joysticks::power_level battery;
-
-
     JoystickWindow(JoystickListWindow* parent,
-                   unsigned index);
+                   sdl::joystick::instance_id id);
 
     ~JoystickWindow()
         noexcept override;
@@ -83,26 +64,8 @@ struct JoystickWindow : Window {
     void
     show_extras();
 
-
     void
-    handle(const sdl::events::event& e)
-        override;
-
-
-    void
-    handle(const sdl::events::joy_axis& e);
-
-    void
-    handle(const sdl::events::joy_ball& e);
-
-    void
-    handle(const sdl::events::joy_battery& e);
-
-    void
-    handle(const sdl::events::joy_button& e);
-
-    void
-    handle(const sdl::events::joy_hat& e);
+    show_mapping();
 
 
     void

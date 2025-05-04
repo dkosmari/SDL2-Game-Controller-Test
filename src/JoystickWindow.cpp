@@ -1,37 +1,34 @@
 #include <chrono>
 #include <iostream>
+#include <string>
 
 #include <SDL_timer.h>
 
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 #include <implot.h>
+
+#include <sdl2xx/game_controller.hpp>
 
 #include "JoystickWindow.hpp"
 
 #include "JoystickListWindow.hpp"
 
 
-// #define DEBUG_BALLS
-
-// #define DEBUG_HATS
-
-using std::cout;
-using std::endl;
-
 using namespace std::literals;
 
 
 namespace {
 
-    const unsigned max_history = 60 * 5;
+    const unsigned max_history_size = 60 * 5;
 
     const ImVec4 key_color = {1.0, 1.0, 0.5, 1.0};
 
 
     sdl::vec2
-    to_pos(sdl::joysticks::hat_dir dir)
+    to_pos(sdl::joystick::hat_dir dir)
     {
-        using sdl::joysticks::hat_dir;
+        using sdl::joystick::hat_dir;
         switch (dir) {
             case hat_dir::centered:
                 return {0, 0};
@@ -56,74 +53,71 @@ namespace {
         }
     }
 
+
+    // Add line breaks after each ','
+    std::string
+    break_mapping(const std::string& input)
+    {
+        using std::string;
+
+        string output;
+
+        string::size_type start, finish;
+
+        // unsigned loops = 0;
+        // unsigned max_loops = 100;
+        start = 0;
+        while ((finish = input.find(',', start)) != string::npos) {
+            ++finish; // include the comma to this line
+            output.append(input, start, finish - start);
+            output.append(1, '\n');
+            start = finish;
+            // ++loops;
+            // if (loops > max_loops) {
+            //     std::cerr << "fuck!" << std::endl;
+            //     break;
+            // }
+            // std::cout << "[" << output << "]" << std::endl;
+        }
+        output.append(input, start);
+        return output;
+    }
+
+
+    // Remove all line breaks.
+    std::string
+    glue_mapping(const std::string& input)
+    {
+        using std::string;
+
+        string output;
+
+        string::size_type start, finish;
+
+        start = 0;
+        while ((finish = input.find('\n', start)) != string::npos) {
+            output.append(input, start, finish - start);
+            start = finish + 1; // skip over the line break
+        }
+        output.append(input, start);
+        return output;
+    }
 }
 
 
 JoystickWindow::JoystickWindow(JoystickListWindow* parent,
-                               unsigned index) :
+                               sdl::joystick::instance_id id) :
     parent{parent},
-    joy{index},
-    id{joy.get_id()},
-    name{joy.try_get_name().value_or("<NONE>")},
-    path{joy.try_get_path().value_or("<NONE>")},
-    vendor{joy.get_vendor()},
-    product{joy.get_product()},
-    version{joy.get_version()},
-    firmware{joy.get_firmware()},
-    serial{joy.try_get_serial().value_or(nullptr)},
-    type{joy.get_type()},
-    guid{joy.get_guid()}
+    id{id},
+    dev{sdl::joystick::device::from_id(id)}
 {
-    {
-        const unsigned num_axes = joy.get_num_axes();
-        current_axis.resize(num_axes);
-        for (unsigned i = 0; i < num_axes; ++i)
-            current_axis[i] = joy.get_axis(i);
-        axis_histories.resize(num_axes);
-    }
-
-    {
-#ifdef DEBUG_BALLS
-        const unsigned num_balls = joy.get_num_axes() / 2;
-        current_ball.resize(num_balls);
-        for (unsigned i = 0; i < num_balls; ++i)
-            current_ball[i] = {0, 0};
-        ball_histories.resize(num_balls);
-#else
-        const unsigned num_balls = joy.get_num_balls();
-        current_ball.resize(num_balls);
-        for (unsigned i = 0; i < num_balls; ++i)
-            current_ball[i] = joy.get_ball(i);
-        ball_histories.resize(num_balls);
-#endif
-    }
-
-    {
-#ifdef DEBUG_HATS
-        const unsigned num_hats = 1;
-        current_hat.resize(num_hats);
-#else
-        const unsigned num_hats = joy.get_num_hats();
-        current_hat.resize(num_hats);
-        for (unsigned i = 0; i < num_hats; ++i)
-            current_hat[i] = joy.get_hat(i);
-#endif
-    }
-
-    {
-        const unsigned num_buttons = joy.get_num_buttons();
-        current_button.resize(num_buttons);
-        for (unsigned i = 0; i < num_buttons; ++i)
-            current_button[i] = joy.get_button(i);
-    }
-
-    battery = joy.get_power_level();
+    axis_histories.resize(dev.get_num_axes());
+    ball_histories.resize(dev.get_num_balls());
 }
 
 
 JoystickWindow::~JoystickWindow()
-    noexcept
-{}
+    noexcept = default;
 
 
 void
@@ -131,8 +125,11 @@ JoystickWindow::process()
 {
     update_history();
 
-    ImGui::SetNextWindowSize({500, 500}, ImGuiCond_FirstUseEver);
-    std::string title = "Joystick: "s + name + "##"s + std::to_string(id);
+    ImGui::SetNextWindowSize({600, 500}, ImGuiCond_FirstUseEver);
+    std::string title = "Joystick: "s
+        + dev.try_get_name().value_or("")
+        + "##"s
+        + std::to_string(id);
     if (ImGui::Begin(title.data(), &is_open)) {
 
         ImGui::BeginTabBar("main_items");
@@ -159,6 +156,11 @@ JoystickWindow::process()
 
         if (ImGui::BeginTabItem("Buttons")) {
             show_buttons();
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Mapping")) {
+            show_mapping();
             ImGui::EndTabItem();
         }
 
@@ -189,51 +191,59 @@ JoystickWindow::show_details()
         ImGui::SetNextItemWidth(-FLT_MIN);
         ImGui::TextColored(key_color, "Name");
         ImGui::TableNextColumn();
+        auto name = dev.try_get_name();
         if (name)
-            ImGui::TextUnformatted(name);
+            ImGui::Text("%s", *name);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Instance");
+        ImGui::TextColored(key_color, "ID");
         ImGui::TableNextColumn();
-        ImGui::Text("%d", id);
+        ImGui::Text("%d", dev.get_id());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::TextColored(key_color, "Path");
         ImGui::TableNextColumn();
+        auto path = dev.try_get_path();
         if (path)
-            ImGui::TextUnformatted(path);
+            ImGui::Text("%s", *path);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::TextColored(key_color, "VID:PID");
         ImGui::TableNextColumn();
-        ImGui::Text("%04x:%04x (%04x)", vendor, product, version);
+        ImGui::Text("%04x:%04x (%04x)",
+                    dev.get_vendor(),
+                    dev.get_product(),
+                    dev.get_version());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::TextColored(key_color, "Firmware");
         ImGui::TableNextColumn();
-        ImGui::Text("%04x", firmware);
+        ImGui::Text("%04x", dev.get_firmware());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::TextColored(key_color, "Serial");
         ImGui::TableNextColumn();
+        auto serial = dev.try_get_serial();
         if (serial)
-            ImGui::TextUnformatted(serial);
+            ImGui::Text("%s", *serial);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::TextColored(key_color, "Type");
         ImGui::TableNextColumn();
+        auto type = dev.get_type();
         ImGui::Text("%s", to_string(type).data());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::TextColored(key_color, "GUID");
         ImGui::TableNextColumn();
+        auto guid = dev.get_guid();
         ImGui::Text("%s", to_string(guid).data());
 
         ImGui::TableNextRow();
@@ -241,17 +251,17 @@ JoystickWindow::show_details()
         ImGui::TextColored(key_color, "Player");
         ImGui::TableNextColumn();
         {
-            int p = joy.get_player();
+            int p = dev.get_player();
             if (ImGui::InputInt("##Player", &p))
-                joy.set_player(p);
+                dev.set_player(p);
         }
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::TextColored(key_color, "Battery");
         ImGui::TableNextColumn();
-        ImGui::Text("%s", to_string(battery).data());
-
+        auto power = dev.get_power_level();
+        ImGui::Text("%s", to_string(power).data());
 
         ImGui::EndTable();
     }
@@ -271,17 +281,12 @@ JoystickWindow::show_axes()
                           | ImPlotAxisFlags_NoLabel
                           | ImPlotAxisFlags_NoTickLabels,
                           ImPlotAxisFlags_RangeFit);
-        ImPlot::SetupAxisLimits(ImAxis_X1,
-                                0,
-                                max_history - 1,
-                                ImPlotCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_Y1,
-                                sdl::joysticks::axis_min - 1024,
-                                sdl::joysticks::axis_max + 1024,
+        ImPlot::SetupAxesLimits(0, max_history_size - 1,
+                                -1.1, 1.1,
                                 ImPlotCond_Always);
         ImPlot::SetupFinish();
 
-        for (std::size_t i = 0; i < axis_histories.size(); ++i) {
+        for (unsigned i = 0; i < dev.get_num_axes(); ++i) {
             auto& history = axis_histories[i];
             if (!history.empty()) {
                 std::string label = "Axis " + std::to_string(i);
@@ -309,7 +314,7 @@ JoystickWindow::show_balls()
                           ImPlotAxisFlags_AutoFit);
         ImPlot::SetupFinish();
 
-        for (std::size_t i = 0; i < ball_histories.size(); ++i) {
+        for (unsigned i = 0; i < dev.get_num_balls(); ++i) {
             auto& history = ball_histories[i];
             if (!history.empty()) {
                 std::string label = "Ball " + std::to_string(i);
@@ -338,7 +343,7 @@ namespace ImPlot {
 void
 JoystickWindow::show_hats()
 {
-    if (current_hat.empty())
+    if (dev.get_num_hats() == 0)
         return;
 
     if (ImPlot::BeginPlot("Hats", {-1, -1}, ImPlotFlags_NoInputs)) {
@@ -355,12 +360,12 @@ JoystickWindow::show_hats()
                                 ImPlotCond_Always);
         ImPlot::SetupFinish();
 
-        for (std::size_t i = 0; i < current_hat.size(); ++i) {
+        for (unsigned i = 0; i < dev.get_num_hats(); ++i) {
             std::string label = "Hat " + std::to_string(i);
-            auto h = current_hat[i];
+            auto h = dev.get_hat(i);
             auto pos = to_pos(h);
 
-            bool has_direction = h != sdl::joysticks::hat_dir::centered;
+            bool has_direction = h != sdl::joystick::hat_dir::centered;
             ImPlot::SetNextMarkerStyle(has_direction
                                        ? ImPlotMarker_Diamond
                                        : ImPlotMarker_Circle,
@@ -390,15 +395,15 @@ JoystickWindow::show_hats()
 void
 JoystickWindow::show_buttons()
 {
-    if (current_button.empty())
+    if (dev.get_num_buttons() == 0)
         return;
 
     ImGui::BeginDisabled(true);
-    for (std::size_t i = 0; i < current_button.size(); ++i) {
+    for (unsigned i = 0; i < dev.get_num_buttons(); ++i) {
         if (i > 0 && (i % 10 != 0))
             ImGui::SameLine();
         std::string label = "##" + std::to_string(i);
-        bool value = current_button[i];
+        bool value = dev.get_button(i);
         ImGui::RadioButton(label.data(), value);
     }
     ImGui::EndDisabled();
@@ -410,20 +415,20 @@ JoystickWindow::show_extras()
 {
     ImGui::TextColored(key_color, "Rumble");
     ImGui::Indent();
-    ImGui::BeginDisabled(!joy.has_rumble());
+    ImGui::BeginDisabled(!dev.has_rumble());
     if (ImGui::Button("Low Freq"))
-        joy.rumble(0xffff, 0, 250ms);
+        dev.rumble(0xffff, 0, 250ms);
     ImGui::SameLine();
     if (ImGui::Button("High Freq"))
-        joy.rumble(0, 0xffff, 250ms);
+        dev.rumble(0, 0xffff, 250ms);
     ImGui::EndDisabled();
 
-    ImGui::BeginDisabled(!joy.has_rumble_on_triggers());
+    ImGui::BeginDisabled(!dev.has_rumble_on_triggers());
     if (ImGui::Button("Left Trigger"))
-        joy.rumble_triggers(0xffff, 0, 250ms);
+        dev.rumble_triggers(1.0, 0.0, 250ms);
     ImGui::SameLine();
     if (ImGui::Button("Right Trigger"))
-        joy.rumble_triggers(0, 0xffff, 250ms);
+        dev.rumble_triggers(0.0, 1.0, 250ms);
     ImGui::EndDisabled();
     ImGui::Unindent();
 
@@ -432,12 +437,12 @@ JoystickWindow::show_extras()
     // Show LED
     ImGui::TextColored(key_color, "LED");
     ImGui::Indent();
-    ImGui::BeginDisabled(!joy.has_led());
+    ImGui::BeginDisabled(!dev.has_led());
     {
         if (ImGui::ColorEdit3("LED",
                               led_rgb,
                               ImGuiColorEditFlags_NoAlpha))
-            joy.set_led(sdl::color::from_rgb(led_rgb[0], led_rgb[1], led_rgb[3]));
+            dev.set_led(sdl::color::from_rgb(led_rgb[0], led_rgb[1], led_rgb[3]));
     }
     ImGui::EndDisabled();
     ImGui::Unindent();
@@ -445,132 +450,57 @@ JoystickWindow::show_extras()
 
 
 void
-JoystickWindow::handle(const sdl::events::event& e)
+JoystickWindow::show_mapping()
 {
-    switch (e.type) {
+    using std::cout;
+    using std::endl;
 
-        case SDL_JOYAXISMOTION:
-            handle(e.jaxis);
-            break;
-
-        case SDL_JOYBALLMOTION:
-            handle(e.jball);
-            break;
-
-        case SDL_JOYBATTERYUPDATED:
-            handle(e.jbattery);
-            break;
-
-        case SDL_JOYBUTTONDOWN:
-        case SDL_JOYBUTTONUP:
-            handle(e.jbutton);
-            break;
-
-        case SDL_JOYHATMOTION:
-            handle(e.jhat);
-            break;
+    if (ImGui::Button("Revert")) {
+        mapping.clear();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Apply")) {
+        auto str = glue_mapping(mapping);
+        auto status = sdl::game_controller::try_add_mapping(str);
+        if (status) {
+            if (*status)
+                cout << "Added mapping." << endl;
+            else
+                cout << "Replaced mapping." << endl;
+        } else {
+            cout << "Failed to add mapping: "
+                 << status.error().what()
+                 << endl;
+        }
 
     }
-}
 
-
-void
-JoystickWindow::handle(const sdl::events::joy_axis& e)
-{
-    if (e.which != id)
-        return;
-
-#ifdef DEBUG_BALLS
-    // generate fake ball movement from the axes
-    int delta = current_axis[e.axis] - e.value;
-    unsigned ball = e.axis / 2;
-    if ((e.axis & 1) == 0) {
-        current_ball[ball].x = delta;
-    } else {
-        current_ball[ball].y = delta;
+    if (mapping.empty()) {
+        auto guid = dev.get_guid();
+        mapping = break_mapping(sdl::game_controller::try_get_mapping(guid).value_or(""));
     }
-#endif
 
+    ImGui::InputTextMultiline("##mapping_editor", &mapping, {-1, 0});
 
-#ifdef DEBUG_HATS
-    using sdl::joysticks::hat_dir;
-    Uint8 h = current_hat[0];
-    if (e.axis == 0) {
-        h &= ~hat_dir::left;
-        h &= ~hat_dir::right;
-        if (e.value < sdl::joysticks::axis_min / 2)
-            h |= hat_dir::left;
-        if (e.value > sdl::joysticks::axis_max / 2)
-            h |= hat_dir::right;
-    }
-    if (e.axis == 1) {
-        h &= ~hat_dir::up;
-        h &= ~hat_dir::down;
-        if (e.value < sdl::joysticks::axis_min / 2)
-            h |= hat_dir::up;
-        if (e.value > sdl::joysticks::axis_max / 2)
-            h |= hat_dir::down;
-    }
-    current_hat[0] = static_cast<hat_dir>(h);
-#endif
-
-    current_axis[e.axis] = e.value;
-}
-
-
-void
-JoystickWindow::handle(const sdl::events::joy_ball& e)
-{
-    if (e.which != id)
-        return;
-    current_ball[e.ball] = {e.xrel, e.yrel};
-}
-
-
-void
-JoystickWindow::handle(const sdl::events::joy_battery& e)
-{
-    if (e.which != id)
-        return;
-    battery = static_cast<sdl::joysticks::power_level>(e.level);
-}
-
-
-void
-JoystickWindow::handle(const sdl::events::joy_button& e)
-{
-    if (e.which != id)
-        return;
-    current_button[e.button] = e.state;
-}
-
-
-void
-JoystickWindow::handle(const sdl::events::joy_hat& e)
-{
-    if (e.which != id)
-        return;
-    current_hat[e.hat] = static_cast<sdl::joysticks::hat_dir>(e.value);
 }
 
 
 void
 JoystickWindow::update_history()
 {
-    for (unsigned i = 0; i < current_axis.size(); ++i) {
-        auto value = current_axis[i];
+    for (unsigned i = 0; i < dev.get_num_axes(); ++i) {
+        auto value = dev.get_axis(i);
         auto& history = axis_histories[i];
-        if (history.size() >= max_history)
+        if (history.size() >= max_history_size)
             history.erase(history.begin());
         history.push_back(value);
     }
 
-    for (unsigned i = 0; i < current_ball.size(); ++i) {
-        auto value = current_ball[i];
+    for (unsigned i = 0; i < dev.get_num_balls(); ++i) {
+        auto value = dev.get_ball(i);
         auto& history = ball_histories[i];
-        if (history.size() >= max_history)
+        if (history.size() >= max_history_size)
             history.erase(history.begin());
         history.push_back(value);
     }
-
 }

@@ -14,7 +14,7 @@ struct Window {
 
     virtual
     void
-    handle(const sdl::events::event& e) = 0;
+    handle(const sdl::events::event& e);
 
 };
 

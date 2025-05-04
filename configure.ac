@@ -23,5 +23,6 @@ AX_SUBDIRS_CONFIGURE([external/sdl2xx],
                      [[--disable-examples],[--disable-mixer],[--disable-image],[--disable-ttf]])
 
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile
+                 external/Makefile])
 AC_OUTPUT

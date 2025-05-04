@@ -1,23 +1,30 @@
+#include <iostream>
+
 #include <imgui.h>
 
-#include "JoystickListWindow.hpp"
+#include "GameControllerListWindow.hpp"
 
-#include "JoystickWindow.hpp"
+#include "GameControllerWindow.hpp"
 
 
-JoystickListWindow::~JoystickListWindow()
+using std::cout;
+using std::endl;
+
+
+GameControllerListWindow::~GameControllerListWindow()
     noexcept = default;
 
 
 void
-JoystickListWindow::process()
+GameControllerListWindow::process()
 {
     namespace js = sdl::joystick;
+    namespace gc = sdl::game_controller;
 
     ImGui::SetNextWindowSize({800, 200}, ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("Joysticks")) {
+    if (ImGui::Begin("Game Controllers")) {
 
-        ImGui::BeginTable("joystick_list", 5);
+        ImGui::BeginTable("game_controller_list", 5);
 
         ImGui::TableSetupColumn("##open_button", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed);
@@ -26,10 +33,15 @@ JoystickListWindow::process()
         ImGui::TableSetupColumn("VID:PID", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow();
 
-        for (unsigned idx = 0; idx < js::get_num_devices(); ++idx) {
-            ImGui::TableNextRow();
+        const unsigned n = js::get_num_devices();
+        for (unsigned idx = 0; idx < n; ++idx) {
 
-            auto id = js::get_id(idx);
+            if (!gc::is_game_controller(idx))
+                continue;
+
+            auto id = gc::get_id(idx);
+
+            ImGui::TableNextRow();
 
             ImGui::PushID(id);
 
@@ -41,28 +53,26 @@ JoystickListWindow::process()
             ImGui::Text("%d", id);
 
             ImGui::TableNextColumn();
-            auto name = js::try_get_name(idx);
+            auto name = gc::try_get_name(idx);
             if (name)
                 ImGui::Text("%s", *name);
 
             ImGui::TableNextColumn();
-            auto path = js::try_get_path(idx);
+            auto path = gc::try_get_path(idx);
             if (path)
                 ImGui::Text("%s", *path);
 
             ImGui::TableNextColumn();
             ImGui::Text("%04x:%04x",
-                        js::get_vendor(idx),
-                        js::get_product(idx));
+                        gc::get_vendor(idx),
+                        gc::get_product(idx));
 
             ImGui::PopID();
         }
 
         ImGui::EndTable();
-
     }
     ImGui::End();
-
 
     for (auto& [id, child] : children)
         if (child)
@@ -73,16 +83,16 @@ JoystickListWindow::process()
 
 
 void
-JoystickListWindow::handle(const sdl::events::event& e)
+GameControllerListWindow::handle(const sdl::events::event& e)
 {
     switch (e.type) {
 
-        case sdl::events::type::e_joy_device_added:
-            add(e.jdevice.which);
+        case sdl::events::type::e_controller_device_added:
+            add(e.cdevice.which);
             break;
 
-        case sdl::events::type::e_joy_device_removed:
-            remove(e.jdevice.which);
+        case sdl::events::type::e_controller_device_removed:
+            remove(e.cdevice.which);
             break;
 
     }
@@ -94,35 +104,35 @@ JoystickListWindow::handle(const sdl::events::event& e)
 
 
 void
-JoystickListWindow::add(unsigned)
+GameControllerListWindow::add(unsigned)
 {}
 
 
 void
-JoystickListWindow::remove(instance_id id)
+GameControllerListWindow::remove(instance_id id)
 {
     children.erase(id);
 }
 
 
 void
-JoystickListWindow::open(instance_id id)
+GameControllerListWindow::open(instance_id id)
 {
     auto& child = children[id];
     if (!child)
-        child = std::make_unique<JoystickWindow>(this, id);
+        child = std::make_unique<GameControllerWindow>(this, id);
 }
 
 
 void
-JoystickListWindow::close_later(instance_id id)
+GameControllerListWindow::close_later(instance_id id)
 {
     pending_close.insert(id);
 }
 
 
 void
-JoystickListWindow::process_close_later()
+GameControllerListWindow::process_close_later()
 {
     for (auto id : pending_close)
         remove(id);

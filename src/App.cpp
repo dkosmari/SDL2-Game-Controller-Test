@@ -13,6 +13,7 @@
 
 #include "App.hpp"
 
+#include "GameControllerListWindow.hpp"
 #include "JoystickListWindow.hpp"
 
 using std::filesystem::path;
@@ -29,7 +30,13 @@ ImVector<ImWchar> glyph_ranges;
 
 
 App::App() :
-    sdl_init{ sdl::init::flag::video | sdl::init::flag::joystick },
+    sdl_init{
+        sdl::init::flag::video,
+        sdl::init::flag::joystick,
+        sdl::init::flag::game_controller,
+        sdl::init::flag::sensor,
+        sdl::init::flag::haptic
+    },
     window{
         PACKAGE_NAME,
         sdl::window::pos_undefined,
@@ -60,10 +67,18 @@ App::App() :
                                  glyph_ranges.Data);
 
 
+    sdl::game_controller::try_add_mappings("gamecontrollerdb.txt");
+
+
     ImGui_ImplSDL2_InitForSDLRenderer(window.data(), renderer.data());
     ImGui_ImplSDLRenderer2_Init(renderer.data());
 
     children.push_back(std::make_unique<JoystickListWindow>());
+    children.push_back(std::make_unique<GameControllerListWindow>());
+
+
+    // unsigned n_sensors = sdl::sensor::get_num_devices();
+    // cout << "num sensors: " << n_sensors << endl;
 }
 
 
@@ -108,8 +123,10 @@ App::draw()
     ImGui::EndFrame();
     ImGui::Render();
 
-    renderer.set_color(0x101010_rgb);
+    // renderer.set_color(0x101010_rgb);
+    renderer.set_color(sdl::color::black);
     renderer.clear();
+
     ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer.data());
 
     renderer.present();
@@ -136,7 +153,7 @@ App::process_events()
 
         switch (event->type) {
 
-            case SDL_QUIT:
+            case sdl::events::type::e_quit:
                 running = false;
                 break;
 
