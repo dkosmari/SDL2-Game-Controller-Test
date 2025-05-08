@@ -1,6 +1,7 @@
 #ifndef JOYSTICKWINDOW_HPP
 #define JOYSTICKWINDOW_HPP
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -17,12 +18,14 @@ struct JoystickWindow : Window {
     JoystickListWindow* parent;
 
     sdl::joystick::instance_id id;
+    sdl::joystick::guid guid;
 
     sdl::joystick::device dev;
 
     float led_rgb[3] = {1, 1, 1};
 
-    std::string mapping;
+    std::map<std::string, std::string> mapping;
+    Uint16 crc;
 
     bool is_open = true;
 
@@ -66,6 +69,16 @@ struct JoystickWindow : Window {
 
     void
     show_mapping();
+
+
+    void
+    show_inputs_combo(const std::string& dst,
+                      const std::string& src,
+                      const std::string& src_label);
+
+
+    std::string
+    get_input(const std::string& name);
 
 
     void

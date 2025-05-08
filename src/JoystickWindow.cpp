@@ -1,5 +1,7 @@
 #include <chrono>
+#include <cstring>
 #include <iostream>
+#include <ranges>
 #include <string>
 
 #include <SDL_timer.h>
@@ -8,6 +10,7 @@
 #include <misc/cpp/imgui_stdlib.h>
 #include <implot.h>
 
+#include <sdl2xx/clipboard.hpp>
 #include <sdl2xx/game_controller.hpp>
 
 #include "JoystickWindow.hpp"
@@ -16,6 +19,9 @@
 
 
 using namespace std::literals;
+
+using std::cout;
+using std::endl;
 
 
 namespace {
@@ -54,55 +60,79 @@ namespace {
     }
 
 
-    // Add line breaks after each ','
-    std::string
-    break_mapping(const std::string& input)
+    std::vector<std::string>
+    split(const std::string& input,
+          char separator)
     {
         using std::string;
-
-        string output;
+        std::vector<string> result;
 
         string::size_type start, finish;
-
-        // unsigned loops = 0;
-        // unsigned max_loops = 100;
         start = 0;
-        while ((finish = input.find(',', start)) != string::npos) {
-            ++finish; // include the comma to this line
-            output.append(input, start, finish - start);
-            output.append(1, '\n');
-            start = finish;
-            // ++loops;
-            // if (loops > max_loops) {
-            //     std::cerr << "fuck!" << std::endl;
-            //     break;
-            // }
-            // std::cout << "[" << output << "]" << std::endl;
+        while ((finish = input.find(separator, start)) != string::npos) {
+            result.push_back(input.substr(start, finish - start));
+            start = finish + 1; // skip over separator
         }
-        output.append(input, start);
-        return output;
+        result.push_back(input.substr(start));
+        return result;
     }
 
 
-    // Remove all line breaks.
-    std::string
-    glue_mapping(const std::string& input)
+    std::map<std::string, std::string>
+    parse_mapping(const std::string& input)
     {
-        using std::string;
+        std::map<std::string, std::string> mapping;
 
-        string output;
-
-        string::size_type start, finish;
-
-        start = 0;
-        while ((finish = input.find('\n', start)) != string::npos) {
-            output.append(input, start, finish - start);
-            start = finish + 1; // skip over the line break
+        auto fields = split(input, ',');
+        if (fields.size() < 2)
+            throw std::runtime_error{"invalid mapping string"};
+        mapping["guid"] = fields[0];
+        mapping["name"] = fields[1];
+        for (const auto& token : fields | std::views::drop(2)) {
+            if (token.empty())
+                continue;
+            // cout << "splitting token \"" << token << "\"" << endl;
+            auto keyval = split(token, ':');
+            if (keyval.size() != 2) {
+                cout << "Error parsing mapping string: \"" << input << "\"" << endl;
+                continue;
+            }
+            mapping[keyval.front()] = keyval.back();
         }
-        output.append(input, start);
-        return output;
+        return mapping;
     }
-}
+
+
+    [[maybe_unused]]
+    void
+    dump_mapping(const std::map<std::string, std::string>& mapping)
+    {
+        cout << "Mapping:\n";
+        for (auto& [key, val] : mapping) {
+            cout << "    " << key << " : " << val << "\n";
+        }
+        cout << endl;
+    }
+
+
+    std::string
+    build_mapping(const std::map<std::string, std::string>& mapping)
+    {
+        std::string result = mapping.at("guid") + ",";
+        result += mapping.at("name") + ",";
+
+        for (auto& [key, val] : mapping) {
+            if (key == "guid" || key == "name")
+                continue;
+            if (val.empty())
+                continue;
+            result += key + ":" + val + ",";
+        }
+
+        return result;
+    }
+
+} // namespace
 
 
 JoystickWindow::JoystickWindow(JoystickListWindow* parent,
@@ -113,6 +143,18 @@ JoystickWindow::JoystickWindow(JoystickListWindow* parent,
 {
     axis_histories.resize(dev.get_num_axes());
     ball_histories.resize(dev.get_num_balls());
+
+
+    guid = dev.get_guid();
+    auto [vendor_, product_, version_, crc16_] = sdl::joystick::parse(guid);
+    crc = crc16_;
+
+    auto gc_mapping = sdl::game_controller::try_get_mapping(guid);
+    if (gc_mapping) {
+        cout << "found mapping: " << *gc_mapping << endl;
+        mapping = parse_mapping(*gc_mapping);
+        // dump_mapping(mapping);
+    }
 }
 
 
@@ -188,7 +230,6 @@ JoystickWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::SetNextItemWidth(-FLT_MIN);
         ImGui::TextColored(key_color, "Name");
         ImGui::TableNextColumn();
         auto name = dev.try_get_name();
@@ -243,7 +284,6 @@ JoystickWindow::show_details()
         ImGui::TableNextColumn();
         ImGui::TextColored(key_color, "GUID");
         ImGui::TableNextColumn();
-        auto guid = dev.get_guid();
         ImGui::Text("%s", to_string(guid).data());
 
         ImGui::TableNextRow();
@@ -399,13 +439,21 @@ JoystickWindow::show_buttons()
         return;
 
     ImGui::BeginDisabled(true);
-    for (unsigned i = 0; i < dev.get_num_buttons(); ++i) {
-        if (i > 0 && (i % 10 != 0))
-            ImGui::SameLine();
-        std::string label = "##" + std::to_string(i);
-        bool value = dev.get_button(i);
-        ImGui::RadioButton(label.data(), value);
+
+    const unsigned n_columns = 8;
+    const unsigned n_buttons = dev.get_num_buttons();
+
+    if (ImGui::BeginTable("Buttons", n_columns)) {
+        for (unsigned i = 0; i < n_buttons; ++i) {
+            std::string label = std::to_string(i);
+            bool value = dev.get_button(i);
+            ImGui::TableNextColumn();
+            ImGui::RadioButton(label.data(), value);
+        }
+
+        ImGui::EndTable();
     }
+
     ImGui::EndDisabled();
 }
 
@@ -455,33 +503,233 @@ JoystickWindow::show_mapping()
     using std::cout;
     using std::endl;
 
-    if (ImGui::Button("Revert")) {
-        mapping.clear();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Apply")) {
-        auto str = glue_mapping(mapping);
-        auto status = sdl::game_controller::try_add_mapping(str);
-        if (status) {
-            if (*status)
-                cout << "Added mapping." << endl;
-            else
-                cout << "Replaced mapping." << endl;
-        } else {
-            cout << "Failed to add mapping: "
-                 << status.error().what()
-                 << endl;
+    bool use_crc = mapping.contains("crc");
+
+    if (ImGui::BeginTable("Mappings", 2)) {
+
+        ImGui::TableSetupColumn("Game Controller", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("Joystick", ImGuiTableColumnFlags_WidthStretch);
+
+        // GUID
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "GUID");
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", to_string(guid).data());
+
+        // Name
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "name");
+        ImGui::TableNextColumn();
+        ImGui::PushItemWidth(-FLT_MIN);
+        ImGui::InputText("##name", &mapping["name"]);
+        ImGui::PopItemWidth();
+
+        // Platform
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "Platform");
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", SDL_GetPlatform());
+
+        // CRC16
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(key_color, "crc");
+        ImGui::TableNextColumn();
+        ImGui::Text("%04x", crc);
+        ImGui::SameLine();
+        if (ImGui::Checkbox("use crc", &use_crc)) {
+            if (use_crc) {
+                char buf[8];
+                std::snprintf(buf, sizeof buf, "%04x", crc);
+                mapping["crc"] = buf;
+            } else {
+                mapping.erase("crc");
+            }
         }
 
+        // Axes
+        using sdl::game_controller::axis;
+        for (int ai = 0; ai < convert(axis::max); ++ai) {
+            axis a = static_cast<axis>(ai);
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            auto dst = to_string(a);
+            ImGui::PushID(dst.data());
+            ImGui::TextColored(key_color, "%s", dst.data());
+
+            ImGui::TableNextColumn();
+            std::string src;
+            if (mapping.contains(dst))
+                src = mapping.at(dst);
+            std::string src_label = src;
+            if (!src.empty())
+                src_label += " (" + get_input(src) + ")";
+            show_inputs_combo(dst, src, src_label);
+            ImGui::PopID();
+        }
+
+        // Buttons
+        using sdl::game_controller::button;
+        for (int bi = 0; bi < convert(button::max); ++bi) {
+            button b = static_cast<button>(bi);
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            auto dst = to_string(b);
+            ImGui::PushID(dst.data());
+            ImGui::TextColored(key_color, "%s", dst.data());
+
+            ImGui::TableNextColumn();
+            std::string src;
+            if (mapping.contains(dst))
+                src = mapping.at(dst);
+            std::string src_label = src;
+            if (!src.empty())
+                src_label += " (" + get_input(src) + ")";
+            show_inputs_combo(dst, src, src_label);
+            ImGui::PopID();
+        }
+
+        ImGui::EndTable();
     }
 
-    if (mapping.empty()) {
-        auto guid = dev.get_guid();
-        mapping = break_mapping(sdl::game_controller::try_get_mapping(guid).value_or(""));
+
+    if (ImGui::Button("Clear")) {
+        auto name = mapping["name"];
+        mapping.clear();
+        mapping["name"] = name;
+        mapping["guid"] = to_string(guid);
+        mapping["platform"] = SDL_GetPlatform();
     }
 
-    ImGui::InputTextMultiline("##mapping_editor", &mapping, {-1, 0});
+    ImGui::SameLine();
 
+    if (ImGui::Button("Revert")) {
+        mapping.clear();
+        auto gc_mapping = sdl::game_controller::try_get_mapping(guid);
+        if (gc_mapping)
+            mapping = parse_mapping(*gc_mapping);
+        if (use_crc)
+            mapping["crc"] = crc;
+    }
+
+    ImGui::SameLine();
+
+    std::string mapping_str = build_mapping(mapping);
+
+    ImGui::BeginDisabled(mapping.empty());
+    if (ImGui::Button("Apply")) {
+        if (!mapping_str.empty()) {
+            auto status = sdl::game_controller::try_add_mapping(mapping_str);
+            if (status) {
+                if (*status)
+                    cout << "Added mapping." << endl;
+                else
+                    cout << "Replaced mapping." << endl;
+            } else {
+                cout << "Failed to add mapping: "
+                     << status.error().what()
+                     << endl;
+            }
+        }
+    }
+    ImGui::EndDisabled();
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Copy"))
+        sdl::clipboard::set_text(mapping_str);
+
+    ImGui::TextWrapped("%s", mapping_str.data());
+}
+
+
+void
+JoystickWindow::show_inputs_combo(const std::string& dst,
+                                  const std::string& src,
+                                  const std::string& src_label)
+{
+    using std::string;
+
+    ImGui::PushItemWidth(-FLT_MIN);
+    if (ImGui::BeginCombo("##Joystick inputs", src_label.data())) {
+        // Special: <NONE>
+        if (ImGui::Selectable("<NONE>", src.empty()))
+            mapping.erase(dst);
+
+        // List all axes.
+        for (unsigned i = 0; i < dev.get_num_axes(); ++i) {
+            string name = "a" + std::to_string(i);
+            bool selected = src == name;
+            string label = name + " (" + get_input(name) + ")";
+            if (ImGui::Selectable(label.data(), selected))
+                mapping[dst] = name;
+        }
+
+        // List all buttons.
+        for (unsigned i = 0; i < dev.get_num_buttons(); ++i) {
+            string name = "b" + std::to_string(i);
+            bool selected = src == name;
+            string label = name + " (" + get_input(name) + ")";
+            if (ImGui::Selectable(label.data(), selected))
+                mapping[dst] = name;
+        }
+
+        // List all hats.
+        using sdl::joystick::hat_dir;
+        for (unsigned i = 0; i < dev.get_num_hats(); ++i) {
+            for (hat_dir d : {
+                    hat_dir::up,
+                    hat_dir::right_up,
+                    hat_dir::right,
+                    hat_dir::down_right,
+                    hat_dir::down,
+                    hat_dir::down_left,
+                    hat_dir::left,
+                    hat_dir::left_up
+                }) {
+                string name = "h" + std::to_string(i)
+                    + "." + std::to_string(static_cast<unsigned>(d));
+                bool selected = src == name;
+                string label = name + " (" + get_input(name) + ")";
+                if (ImGui::Selectable(label.data(), selected))
+                    mapping[dst] = name;
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+    ImGui::PopItemWidth();
+}
+
+
+std::string
+JoystickWindow::get_input(const std::string& name)
+{
+    if (name.size() < 2)
+        return "";
+    if (name[0] == 'a') {
+        unsigned long index = std::stoul(name.substr(1));
+        char buf[64];
+        std::snprintf(buf, sizeof buf, "%+.03f", dev.get_axis(index));
+        return buf;
+        //return std::to_string(dev.get_axis(index));
+    } else if (name[0] == 'b') {
+        unsigned long index = std::stoul(name.substr(1));
+        return dev.get_button(index) ? "on" : "off";
+    } else if (name[0] == 'h') {
+        unsigned hat, val;
+        int r = std::sscanf(name.data(), "h%u.%u", &hat, &val);
+        if (r != 2)
+            return "";
+        auto cur_hat = dev.get_hat(hat);
+        return convert(cur_hat) == val ? "on" : "off";
+    } else
+        return "";
 }
 
 

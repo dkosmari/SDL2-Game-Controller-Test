@@ -68,7 +68,24 @@ App::App() :
 
 
     sdl::game_controller::try_add_mappings("gamecontrollerdb.txt");
-
+    try {
+        for (auto entry : std::filesystem::directory_iterator{"mappings"}) {
+            if (!entry.is_regular_file())
+                continue;
+            auto p = entry.path();
+            if (p.extension() != ".txt" && p.extension() != ".csv")
+                continue;
+            try {
+                sdl::game_controller::add_mappings(p);
+            }
+            catch (std::exception& e) {
+                cout << "Error adding mappings for " << p << ": " << e.what() << endl;
+            }
+        }
+    }
+    catch (std::exception& e) {
+        cout << "Did not add custom mappings: " << e.what() << endl;
+    }
 
     ImGui_ImplSDL2_InitForSDLRenderer(window.data(), renderer.data());
     ImGui_ImplSDLRenderer2_Init(renderer.data());
