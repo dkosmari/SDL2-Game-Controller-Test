@@ -30,24 +30,19 @@ ImVector<ImWchar> glyph_ranges;
 
 
 App::App() :
-    sdl_init{
-        sdl::init::flag::video,
-        sdl::init::flag::joystick,
-        sdl::init::flag::game_controller,
-        sdl::init::flag::sensor,
-        sdl::init::flag::haptic
-    },
-    window{
-        PACKAGE_NAME,
-        sdl::window::pos_undefined,
-        {1600, 900},
-        sdl::window::flag::resizable
-    },
-    renderer{
-        window,
-        -1,
-        sdl::renderer::flag::accelerated | sdl::renderer::flag::present_vsync
-    }
+    sdl_init{sdl::init::flag::video,
+             sdl::init::flag::joystick,
+             sdl::init::flag::game_controller,
+             sdl::init::flag::sensor,
+             sdl::init::flag::haptic},
+    window{PACKAGE_NAME,
+           sdl::window::pos_undefined,
+           {1600, 900},
+           sdl::window::flag::resizable},
+    renderer{window,
+             -1,
+             sdl::renderer::flag::accelerated,
+             sdl::renderer::flag::present_vsync}
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
