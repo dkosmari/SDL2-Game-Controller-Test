@@ -1,0 +1,1 @@
+030083a0341a000005f7000010010000,HuiJia GameCube USB,a:b1,b:b2,back:b7,crc:a083,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b4,lefttrigger:a3,leftx:a0,lefty:a1,platform:Linux,rightshoulder:b5,righttrigger:a4,rightx:a5,righty:a2,start:b9,x:b0,y:b3,

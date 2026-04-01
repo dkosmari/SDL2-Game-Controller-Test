@@ -1,23 +1,28 @@
 syntax: glob
 
+*.a
+*.la
+*.lo
 *.log
 *.o
+*.rpx
+*.wuhb
 *~
 .deps
 .dirstamp
 aclocal.m4
 autom4te.cache
 build-aux
+build-native
+build-wiiu
 compile_flags.txt
 config.h
 config.h.in
 config.status
 configure
+imgui.ini
 lib*.a
 Makefile
 Makefile.in
-sdl2-gamecontroller-test
+sdl2-gamecontroller-test.elf
 stamp-h1
-imgui.ini
-gamecontrollerdb.txt
-mappings

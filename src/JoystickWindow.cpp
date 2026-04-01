@@ -167,7 +167,7 @@ JoystickWindow::process()
 {
     update_history();
 
-    ImGui::SetNextWindowSize({600, 500}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize({1000, 600}, ImGuiCond_Appearing);
     std::string title = "Joystick: "s
         + dev.try_get_name().value_or("")
         + "##"s
@@ -330,9 +330,14 @@ JoystickWindow::show_axes()
             auto& history = axis_histories[i];
             if (!history.empty()) {
                 std::string label = "Axis " + std::to_string(i);
+                ImPlotSpec spec;
+                spec.LineWeight = 4.0f;
                 ImPlot::PlotLine(label.data(),
                                  &history[0],
-                                 history.size());
+                                 history.size(),
+                                 1.0,
+                                 0.0,
+                                 spec);
             }
         }
 
@@ -358,13 +363,14 @@ JoystickWindow::show_balls()
             auto& history = ball_histories[i];
             if (!history.empty()) {
                 std::string label = "Ball " + std::to_string(i);
+                ImPlotSpec spec;
+                spec.Stride = sizeof history[0];
+                spec.LineWeight = 4.0f;
                 ImPlot::PlotLine(label.data(),
                                  &history[0].x,
                                  &history[0].y,
                                  history.size(),
-                                 0,
-                                 0,
-                                 sizeof history[0]);
+                                 spec);
             }
         }
 
@@ -406,19 +412,19 @@ JoystickWindow::show_hats()
             auto pos = to_pos(h);
 
             bool has_direction = h != sdl::joystick::hat_dir::centered;
-            ImPlot::SetNextMarkerStyle(has_direction
-                                       ? ImPlotMarker_Diamond
-                                       : ImPlotMarker_Circle,
-                                       has_direction
-                                       ? ImGui::GetFontSize() / 1.5
-                                       : ImGui::GetFontSize() / 3.0);
+            ImPlotSpec spec;
+            spec.Stride = sizeof pos;
+            spec.Marker = has_direction
+                ? ImPlotMarker_Diamond
+                : ImPlotMarker_Circle;
+            spec.MarkerSize = has_direction
+                ? ImGui::GetFontSize() / 1.5
+                : ImGui::GetFontSize() / 3.0;
             ImPlot::PlotScatter(label.data(),
                                 &pos.x,
                                 &pos.y,
                                 1,
-                                0, // ImPlotScatterFlags
-                                0, // offset
-                                sizeof pos);
+                                spec);
 
             if (!ImPlot::IsItemHidden(label.data()) && has_direction) {
                 ImPlot::PlotText(to_string(h).data(),
@@ -490,7 +496,7 @@ JoystickWindow::show_extras()
         if (ImGui::ColorEdit3("LED",
                               led_rgb,
                               ImGuiColorEditFlags_NoAlpha))
-            dev.set_led(sdl::color::from_rgb(led_rgb[0], led_rgb[1], led_rgb[3]));
+            dev.set_led(sdl::color::from_rgb(led_rgb[0], led_rgb[1], led_rgb[2]));
     }
     ImGui::EndDisabled();
     ImGui::Unindent();

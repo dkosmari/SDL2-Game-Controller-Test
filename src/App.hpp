@@ -20,6 +20,7 @@ struct App {
     std::vector<std::unique_ptr<Window>> children;
     bool running = false;
 
+    std::vector<sdl::game_controller::device> controllers;
 
     App();
 

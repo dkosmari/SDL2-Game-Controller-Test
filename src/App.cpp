@@ -23,10 +23,11 @@ using std::endl;
 
 using namespace sdl::literals;
 
-path assets_path = "assets";
-
-
-ImVector<ImWchar> glyph_ranges;
+#ifdef __WIIU__
+path assets_path = "/vol/content";
+#else
+path assets_path = "assets/content";
+#endif
 
 
 App::App() :
@@ -34,37 +35,50 @@ App::App() :
              sdl::init::flag::joystick,
              sdl::init::flag::game_controller,
              sdl::init::flag::sensor,
-             sdl::init::flag::haptic},
+             sdl::init::flag::haptic,
+             sdl::init::flag::audio},
     window{PACKAGE_NAME,
            sdl::window::pos_undefined,
-           {1600, 900},
+           {1280, 720},
            sdl::window::flag::resizable},
     renderer{window,
              -1,
              sdl::renderer::flag::accelerated,
              sdl::renderer::flag::present_vsync}
 {
+
+    // Create a temporary audio device to stop the boot sound.
+    sdl::audio::spec aspec;
+    aspec.freq = 32000;
+    aspec.format = AUDIO_S16SYS;
+    aspec.channels = 2;
+    aspec.samples = 2048;
+    sdl::audio::device adev{nullptr, false, aspec};
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
 
     auto& io = ImGui::GetIO();
+
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-    ImFontGlyphRangesBuilder builder;
-    builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
-    builder.AddText("•←↑→↓↖↗↘↙");
-    builder.BuildRanges(&glyph_ranges);
+    io.LogFilename = nullptr; // don't save log
+    io.IniFilename = nullptr; // don't save ini
 
-    io.Fonts->AddFontFromFileTTF((assets_path / "DejaVuSans.ttf").c_str(),
-                                 22,
-                                 nullptr,
-                                 glyph_ranges.Data);
+    io.ConfigDragScroll = true;
+    io.ConfigWindowsMoveFromTitleBarOnly = true;
+    io.MouseDragThreshold = 25;
+    io.ConfigInputTrickleEventQueue = false;
+    auto& style = ImGui::GetStyle();
+    style.ScaleAllSizes(2);
 
+    auto font_path = assets_path / "DejaVuSans.ttf";
+    io.Fonts->AddFontFromFileTTF(font_path.c_str(), 30);
 
-    sdl::game_controller::try_add_mappings("gamecontrollerdb.txt");
+    sdl::game_controller::try_add_mappings(assets_path / "gamecontrollerdb.txt");
     try {
-        for (auto entry : std::filesystem::directory_iterator{"mappings"}) {
+        for (auto entry : std::filesystem::directory_iterator{assets_path / "mappings"}) {
             if (!entry.is_regular_file())
                 continue;
             auto p = entry.path();
@@ -135,8 +149,8 @@ App::draw()
     ImGui::EndFrame();
     ImGui::Render();
 
-    // renderer.set_color(0x101010_rgb);
-    renderer.set_color(sdl::color::black);
+    renderer.set_color(0x101010_rgb);
+    // renderer.set_color(sdl::color::black);
     renderer.clear();
 
     ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer.data());
@@ -156,19 +170,35 @@ App::process_ui()
 void
 App::process_events()
 {
-    while (auto event = sdl::events::poll()) {
+    sdl::events::event event;
+    while (sdl::events::poll(event)) {
 
-        ImGui_ImplSDL2_ProcessEvent(&*event);
+        ImGui_ImplSDL2_ProcessEvent(&event);
 
         for (auto& c : children)
-            c->handle(*event);
+            c->handle(event);
 
-        switch (event->type) {
+        switch (sdl::events::type{event.type}) {
+            using enum sdl::events::type;
 
-            case sdl::events::type::e_quit:
+            case quit:
                 running = false;
                 break;
 
+            case controller_device_added:
+                controllers.emplace_back(event.cdevice.which);
+                break;
+
+            case controller_device_removed:
+                std::erase_if(controllers,
+                              [id=event.cdevice.which](sdl::game_controller::device& gc)
+                              {
+                                  return id == gc.get_id();
+                              });
+                break;
+
+            default:
+                ;
         }
 
     }

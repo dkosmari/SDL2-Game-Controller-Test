@@ -14,7 +14,9 @@ JoystickListWindow::process()
 {
     namespace js = sdl::joystick;
 
-    ImGui::SetNextWindowSize({800, 200}, ImGuiCond_FirstUseEver);
+    auto vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos({10, 10}, ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize({vp->Size.x - 20, vp->Size.y/2 - 20}, ImGuiCond_Appearing);
     if (ImGui::Begin("Joysticks")) {
 
         ImGui::BeginTable("joystick_list", 5);
@@ -75,15 +77,19 @@ JoystickListWindow::process()
 void
 JoystickListWindow::handle(const sdl::events::event& e)
 {
-    switch (e.type) {
+    switch (sdl::events::type{e.type}) {
+        using enum sdl::events::type;
 
-        case sdl::events::type::e_joy_device_added:
+        case joy_device_added:
             add(e.jdevice.which);
             break;
 
-        case sdl::events::type::e_joy_device_removed:
+        case joy_device_removed:
             remove(e.jdevice.which);
             break;
+
+        default:
+            ;
 
     }
 

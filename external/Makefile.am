@@ -4,19 +4,15 @@ SUBDIRS = sdl2xx
 AM_CXXFLAGS = -Wall -Wextra -Werror
 
 AM_CPPFLAGS = \
-	$(SDL2_CFLAGS) \
-	-Iimgui \
-	-Iimplot
+	-I$(srcdir)/imgui
 
-LIBS = $(SDL2_LIBS)
-
-
-noinst_LIBRARIES = \
-	libimgui.a \
-	libimplot.a
+noinst_LTLIBRARIES = \
+	libimgui.la \
+	libimplot.la
 
 
-libimgui_a_SOURCES = \
+libimgui_la_SOURCES = \
+	custom_imconfig.h \
 	imgui/backends/imgui_impl_sdl2.cpp \
 	imgui/backends/imgui_impl_sdl2.h \
 	imgui/backends/imgui_impl_sdlrenderer2.cpp \
@@ -30,24 +26,39 @@ libimgui_a_SOURCES = \
 	imgui/imgui_widgets.cpp \
 	imgui/imstb_rectpack.h \
 	imgui/imstb_textedit.h \
-	imgui/imstb_truetype.h \
 	imgui/misc/cpp/imgui_stdlib.cpp \
-	imgui/misc/cpp/imgui_stdlib.h
+	imgui/misc/cpp/imgui_stdlib.h \
+	imgui/misc/freetype/imgui_freetype.cpp \
+	imgui/misc/freetype/imgui_freetype.h
 
-libimgui_a_CPPFLAGS = \
+libimgui_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
-	-Iimgui
+	$(SDL_CFLAGS) \
+	$(FT_CFLAGS) \
+	-I$(srcdir)/imgui \
+	-DIMGUI_USER_CONFIG='"$(srcdir)/custom_imconfig.h"'
 
 
-libimplot_a_SOURCES = \
+libimplot_la_SOURCES = \
 	implot/implot.cpp \
 	implot/implot.h \
 	implot/implot_internal.h \
 	implot/implot_items.cpp
 
-libimplot_a_CPPFLAGS = \
+libimplot_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
-	-Iimgui
+	-I$(srcdir)/imgui \
+	-DIMGUI_USER_CONFIG='"$(srcdir)/custom_imconfig.h"'
+
+if ENABLE_WIIU
+
+libimplot_la_CPPFLAGS += -Dtimegm=mktime
+
+endif ENABLE_WIIU
+
+
+
+
 
 
 .PHONY: company

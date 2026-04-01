@@ -21,7 +21,9 @@ GameControllerListWindow::process()
     namespace js = sdl::joystick;
     namespace gc = sdl::game_controller;
 
-    ImGui::SetNextWindowSize({800, 200}, ImGuiCond_FirstUseEver);
+    auto vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos({10, 10 + vp->Size.y/2}, ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize({vp->Size.x - 20, vp->Size.y/2 - 20}, ImGuiCond_Appearing);
     if (ImGui::Begin("Game Controllers")) {
 
         ImGui::BeginTable("game_controller_list", 5);
@@ -85,16 +87,19 @@ GameControllerListWindow::process()
 void
 GameControllerListWindow::handle(const sdl::events::event& e)
 {
-    switch (e.type) {
+    switch (sdl::events::type{e.type}) {
+        using enum sdl::events::type;
 
-        case sdl::events::type::e_controller_device_added:
+        case controller_device_added:
             add(e.cdevice.which);
             break;
 
-        case sdl::events::type::e_controller_device_removed:
+        case controller_device_removed:
             remove(e.cdevice.which);
             break;
 
+        default:
+            ;
     }
 
     for (auto& [id, child] : children)

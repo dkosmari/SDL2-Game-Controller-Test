@@ -38,11 +38,16 @@ GameControllerWindow::~GameControllerWindow()
 void
 GameControllerWindow::handle(const sdl::events::event& e)
 {
-    switch (e.type) {
-        case sdl::events::type::e_controller_device_remapped:
+    switch (sdl::events::type{e.type}) {
+        using enum sdl::events::type;
+
+        case controller_device_remapped:
             if (e.cdevice.which == id)
                 remap();
             break;
+
+        default:
+            ;
     }
 }
 
@@ -56,7 +61,7 @@ GameControllerWindow::remap()
 void
 GameControllerWindow::process()
 {
-    ImGui::SetNextWindowSize({600, 500}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize({1000, 600}, ImGuiCond_Appearing);
     std::string title = "Game Controller: "s
         + dev.try_get_name().value_or("")
         + "##"s
@@ -183,7 +188,10 @@ GameControllerWindow::show_sticks()
 {
     using sdl::game_controller::axis;
 
-    if (ImPlot::BeginPlot("Sticks", {-1, -1}, ImPlotFlags_NoInputs)) {
+    auto available = ImGui::GetContentRegionAvail();
+    float size = std::min(available.x, available.y);
+    ImGui::SetCursorPosX((available.x - size) / 2);
+    if (ImPlot::BeginPlot("Sticks", {size, size}, ImPlotFlags_NoInputs)) {
 
         ImPlotAxisFlags axis_flags = 0;
         axis_flags |= ImPlotAxisFlags_RangeFit;
@@ -213,13 +221,14 @@ GameControllerWindow::show_sticks()
                 vec2f{ddz, -ddz},
                 vec2f{dz, 0}
             };
+            ImPlotSpec spec;
+            spec.Stride = sizeof(vec2f);
+            spec.LineWeight = 4.0f;
             ImPlot::PlotLine("Deadzone",
                              &points[0].x,
                              &points[0].y,
                              points.size(),
-                             0,
-                             0,
-                             sizeof(vec2f));
+                             spec);
         }
 
 
@@ -239,9 +248,11 @@ GameControllerWindow::plot_stick(const std::string& label,
     if (dev.has_axis(ax) && dev.has_axis(ay)) {
         double x =  dev.get_axis(ax);
         double y = -dev.get_axis(ay);
-        ImPlot::PlotScatter(label.data(), &x, &y, 1, 0);
+        ImPlotSpec spec;
+        spec.Stride = sizeof(double);
+        spec.MarkerSize = 8;
+        ImPlot::PlotScatter(label.data(), &x, &y, 1, spec);
     }
-
 }
 
 
