@@ -4,8 +4,15 @@ GREEN=$(tput setaf 10)
 YELLOW=$(tput setaf 11)
 NONE=$(tput sgr0)
 
-echo "[${GREEN}${PWD}${NONE}] Running '${YELLOW}./bootstrap${NONE}' in external dependencies"
-(cd external/sdl2xx && ./bootstrap) || exit 1
+
+recurse_bootstrap()
+{
+    echo "[${GREEN}${PWD}${NONE}] Running '${YELLOW}./bootstrap${NONE}' in '$1'"
+    (cd "$1"  && ./bootstrap) || exit 1
+}
+
+recurse_bootstrap external/sdl2xx || exit 1
+
 
 echo "[${GREEN}${PWD}${NONE}] Running '${YELLOW}autoreconf --install $@${NONE}'"
 exec autoreconf --install "$@"

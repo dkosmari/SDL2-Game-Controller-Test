@@ -1,43 +1,25 @@
+/*
+ * SDL2 Game Controller Test - a tool to visualize SDL2 game input devices.
+ * Copyright (C) 2026  Daniel K. O. <dkosmari>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef APP_HPP
 #define APP_HPP
 
-#include <memory>
-#include <vector>
+namespace App {
 
-#include <sdl2xx/sdl.hpp>
+    void
+    initialize();
 
-#include "Window.hpp"
-
-
-class Window;
-
-
-struct App {
-
-    sdl::init sdl_init;
-    sdl::window window;
-    sdl::renderer renderer;
-    std::vector<std::unique_ptr<Window>> children;
-    bool running = false;
-
-    std::vector<sdl::game_controller::device> controllers;
-
-    App();
-
-    ~App();
+    void
+    finalize()
+        noexcept;
 
     int
     run();
 
-    void
-    draw();
-
-    void
-    process_ui();
-
-    void
-    process_events();
-
-};
+} // namespace App
 
 #endif

@@ -20,15 +20,17 @@ struct JoystickListWindow : Window {
     std::set<instance_id> pending_close;
 
 
+    JoystickListWindow();
+
     ~JoystickListWindow()
         noexcept;
 
     void
-    process()
+    process_ui()
         override;
 
     void
-    handle(const sdl::events::event& e)
+    process_event(const sdl::events::event& e)
         override;
 
     void

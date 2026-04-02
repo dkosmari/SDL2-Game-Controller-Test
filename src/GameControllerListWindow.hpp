@@ -19,17 +19,18 @@ struct GameControllerListWindow : Window {
     std::map<instance_id, std::unique_ptr<Window>> children;
     std::set<instance_id> pending_close;
 
+    GameControllerListWindow();
 
     ~GameControllerListWindow()
         noexcept;
 
 
     void
-    process()
+    process_ui()
         override;
 
     void
-    handle(const sdl::events::event& e)
+    process_event(const sdl::events::event& e)
         override;
 
     void

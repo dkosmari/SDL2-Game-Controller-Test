@@ -30,7 +30,7 @@ struct GameControllerWindow : Window {
         noexcept override;
 
     void
-    handle(const sdl::events::event& e)
+    process_event(const sdl::events::event& e)
         override;
 
 
@@ -39,7 +39,7 @@ struct GameControllerWindow : Window {
 
 
     void
-    process()
+    process_ui()
         override;
 
 

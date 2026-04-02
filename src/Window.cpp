@@ -1,6 +1,11 @@
 #include "Window.hpp"
 
 
+Window::Window(const std::string& title) :
+    title{title}
+{}
+
+
 void
-Window::handle(const sdl::events::event&)
+Window::process_event(const sdl::events::event&)
 {}

@@ -7,11 +7,13 @@ AM_CPPFLAGS = \
 	-I$(srcdir)/imgui
 
 noinst_LTLIBRARIES = \
-	libimgui.la \
-	libimplot.la
+	imgui/libimgui.la \
+	implot/libimplot.la
 
 
-libimgui_la_SOURCES = \
+# imgui
+
+imgui_libimgui_la_SOURCES = \
 	custom_imconfig.h \
 	imgui/backends/imgui_impl_sdl2.cpp \
 	imgui/backends/imgui_impl_sdl2.h \
@@ -19,6 +21,7 @@ libimgui_la_SOURCES = \
 	imgui/backends/imgui_impl_sdlrenderer2.h \
 	imgui/imconfig.h \
 	imgui/imgui.cpp \
+	imgui/imgui_demo.cpp \
 	imgui/imgui_draw.cpp \
 	imgui/imgui.h \
 	imgui/imgui_internal.h \
@@ -31,7 +34,7 @@ libimgui_la_SOURCES = \
 	imgui/misc/freetype/imgui_freetype.cpp \
 	imgui/misc/freetype/imgui_freetype.h
 
-libimgui_la_CPPFLAGS = \
+imgui_libimgui_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	$(SDL_CFLAGS) \
 	$(FT_CFLAGS) \
@@ -39,20 +42,22 @@ libimgui_la_CPPFLAGS = \
 	-DIMGUI_USER_CONFIG='"$(srcdir)/custom_imconfig.h"'
 
 
-libimplot_la_SOURCES = \
+# implot
+
+implot_libimplot_la_SOURCES = \
 	implot/implot.cpp \
 	implot/implot.h \
 	implot/implot_internal.h \
 	implot/implot_items.cpp
 
-libimplot_la_CPPFLAGS = \
+implot_libimplot_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-I$(srcdir)/imgui \
 	-DIMGUI_USER_CONFIG='"$(srcdir)/custom_imconfig.h"'
 
 if ENABLE_WIIU
 
-libimplot_la_CPPFLAGS += -Dtimegm=mktime
+implot_libimplot_la_CPPFLAGS += -Dtimegm=mktime
 
 endif ENABLE_WIIU
 

@@ -25,10 +25,16 @@ namespace {
 
 GameControllerWindow::GameControllerWindow(GameControllerListWindow* parent,
                                            sdl::game_controller::instance_id id) :
+    Window{"Game Controller "s + std::to_string(id)},
     parent{parent},
     id{id},
     dev{sdl::game_controller::device::from_id(id)}
-{}
+{
+    title = "Game Controller: "s
+        + dev.try_get_name().value_or("")
+        + "##"s
+        + std::to_string(id);
+}
 
 
 GameControllerWindow::~GameControllerWindow()
@@ -36,7 +42,7 @@ GameControllerWindow::~GameControllerWindow()
 
 
 void
-GameControllerWindow::handle(const sdl::events::event& e)
+GameControllerWindow::process_event(const sdl::events::event& e)
 {
     switch (sdl::events::type{e.type}) {
         using enum sdl::events::type;
@@ -59,34 +65,38 @@ GameControllerWindow::remap()
 
 
 void
-GameControllerWindow::process()
+GameControllerWindow::process_ui()
 {
-    ImGui::SetNextWindowSize({1000, 600}, ImGuiCond_Appearing);
-    std::string title = "Game Controller: "s
-        + dev.try_get_name().value_or("")
-        + "##"s
-        + std::to_string(id);
+    ImGui::SetNextWindowSize({1000, 650}, ImGuiCond_Appearing);
     if (ImGui::Begin(title.data(), &is_open)) {
 
         ImGui::BeginTabBar("main_items");
 
         if (ImGui::BeginTabItem("Details")) {
-            show_details();
+            if (ImGui::BeginChild("details_child"))
+                show_details();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Sticks")) {
-            show_sticks();
+            if (ImGui::BeginChild("sticks_child"))
+                show_sticks();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Triggers")) {
-            show_triggers();
+            if (ImGui::BeginChild("triggers_child"))
+                show_triggers();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Buttons")) {
-            show_buttons();
+            if (ImGui::BeginChild("buttons_child"))
+                show_buttons();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 

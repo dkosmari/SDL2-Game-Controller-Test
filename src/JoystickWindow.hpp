@@ -46,7 +46,7 @@ struct JoystickWindow : Window {
 
 
     void
-    process()
+    process_ui()
         override;
 
     void

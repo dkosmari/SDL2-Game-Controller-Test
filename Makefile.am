@@ -1,9 +1,8 @@
-SUBDIRS = \
-	external
+SUBDIRS = external
 
 
 external/%:
-	cd external && $(MAKE) $(AM_MAKEFLAGS)
+	$(MAKE) $(AM_MAKEFLAGS) -C external
 
 
 AM_CXXFLAGS = -Wall -Wextra -Werror
@@ -17,11 +16,17 @@ AM_CPPFLAGS = \
 	-DIMGUI_USER_CONFIG='"$(srcdir)/external/custom_imconfig.h"'
 
 LDADD = \
+	external/imgui/libimgui.la \
+	external/implot/libimplot.la \
+	external/sdl2xx/lib/libsdl2xx.la \
 	$(SDL_LIBS) \
 	$(FT_LIBS)
 
 
-bin_PROGRAMS = sdl2-gamecontroller-test.elf
+BIN_FILE := sdl2-gamecontroller-test.elf
+
+
+bin_PROGRAMS = $(BIN_FILE)
 
 sdl2_gamecontroller_test_elf_SOURCES = \
 	src/App.cpp \
@@ -36,31 +41,21 @@ sdl2_gamecontroller_test_elf_SOURCES = \
 	src/JoystickWindow.hpp \
 	src/main.cpp \
 	src/Window.cpp \
-	src/Window.hpp
+	src/Window.hpp \
+	src/wiiu-stderr.cpp \
+	src/wiiu-stdout.cpp
 
 
-sdl2_gamecontroller_test_elf_LDADD = \
-	external/libimplot.la \
-	external/libimgui.la \
-	external/sdl2xx/lib/libsdl2xx.la \
-	$(LDADD)
-
-sdl2_gamecontroller_test_elf_DEPENDENCIES = \
-	external/libimplot.la \
-	external/libimgui.la \
-	external/sdl2xx/libsdl2xx.la
-
-
-.PHONY: company run
-
+.PHONY: company run wiiu-install wiiu-uninstall
 
 
 if ENABLE_WIIU
 
+# FIX: implot wants to use timegm
 AM_CPPFLAGS += -Dtimegm=mktime
 
-RPX_FILE  = sdl2-gamecontroller-test.rpx
-WUHB_FILE = sdl2-gamecontroller-test.wuhb
+RPX_FILE  = $(BIN_FILE:.elf=.rpx)
+WUHB_FILE = $(RPX_FILE:.rpx=.wuhb)
 
 $(WUHB_FILE): $(RPX_FILE)
 	$(WUHBTOOL) \
@@ -70,12 +65,12 @@ $(WUHB_FILE): $(RPX_FILE)
 		--short-name="$(PACKAGE)" \
 		--author="Daniel K. O."
 
+
 run: $(WUHB_FILE)
 	WIILOAD=tcp:wiiu wiiload $(WUHB_FILE)
 
-.PHONY: wiiu-install wiiu-uninstall
 
-wiiu-install: all
+wiiu-install: $(WUHB_FILE)
 	curl --upload-file $(WUHB_FILE) "ftp://wiiu:/fs/vol/external01/wiiu/apps/"
 
 
@@ -85,11 +80,10 @@ wiiu-uninstall:
 
 all-local: $(WUHB_FILE)
 
-
 else !ENABLE_WIIU
 
-run: all
-	cd $(top_srcdir) && $(abs_builddir)/sdl2-gamecontroller-test.elf
+run: $(BIN_FILE)
+	cd $(top_srcdir) && $(abs_builddir)/$(BIN_FILE)
 
 endif !ENABLE_WIIU
 

@@ -11,12 +11,17 @@ using std::cout;
 using std::endl;
 
 
+GameControllerListWindow::GameControllerListWindow() :
+    Window{"Game Controllers"}
+{}
+
+
 GameControllerListWindow::~GameControllerListWindow()
     noexcept = default;
 
 
 void
-GameControllerListWindow::process()
+GameControllerListWindow::process_ui()
 {
     namespace js = sdl::joystick;
     namespace gc = sdl::game_controller;
@@ -24,7 +29,7 @@ GameControllerListWindow::process()
     auto vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos({10, 10 + vp->Size.y/2}, ImGuiCond_Appearing);
     ImGui::SetNextWindowSize({vp->Size.x - 20, vp->Size.y/2 - 20}, ImGuiCond_Appearing);
-    if (ImGui::Begin("Game Controllers")) {
+    if (ImGui::Begin(title.data())) {
 
         ImGui::BeginTable("game_controller_list", 5);
 
@@ -78,14 +83,14 @@ GameControllerListWindow::process()
 
     for (auto& [id, child] : children)
         if (child)
-            child->process();
+            child->process_ui();
 
     process_close_later();
 }
 
 
 void
-GameControllerListWindow::handle(const sdl::events::event& e)
+GameControllerListWindow::process_event(const sdl::events::event& e)
 {
     switch (sdl::events::type{e.type}) {
         using enum sdl::events::type;
@@ -104,7 +109,7 @@ GameControllerListWindow::handle(const sdl::events::event& e)
 
     for (auto& [id, child] : children)
         if (child)
-            child->handle(e);
+            child->process_event(e);
 }
 
 

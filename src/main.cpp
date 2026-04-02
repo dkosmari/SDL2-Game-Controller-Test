@@ -1,25 +1,24 @@
+#include <cstdlib>
 #include <exception>
 #include <iostream>
 
 #include "App.hpp"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 using std::cout;
-using std::cerr;
 using std::endl;
 
 
 int main(int, char* [])
 {
+    int result;
     try {
-        App app;
-        return app.run();
+        App::initialize();
+        result = App::run();
     }
     catch (std::exception& e) {
-        cerr << "ERROR: " << e.what() << endl;
-        return -1;
+        cout << "ERROR: " << e.what() << endl;
+        result = EXIT_FAILURE;
     }
+    App::finalize();
+    return result;
 }

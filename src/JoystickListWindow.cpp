@@ -5,19 +5,24 @@
 #include "JoystickWindow.hpp"
 
 
+JoystickListWindow::JoystickListWindow() :
+    Window{"Joysticks"}
+{}
+
+
 JoystickListWindow::~JoystickListWindow()
     noexcept = default;
 
 
 void
-JoystickListWindow::process()
+JoystickListWindow::process_ui()
 {
     namespace js = sdl::joystick;
 
     auto vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos({10, 10}, ImGuiCond_Appearing);
     ImGui::SetNextWindowSize({vp->Size.x - 20, vp->Size.y/2 - 20}, ImGuiCond_Appearing);
-    if (ImGui::Begin("Joysticks")) {
+    if (ImGui::Begin(title.data())) {
 
         ImGui::BeginTable("joystick_list", 5);
 
@@ -68,14 +73,14 @@ JoystickListWindow::process()
 
     for (auto& [id, child] : children)
         if (child)
-            child->process();
+            child->process_ui();
 
     process_close_later();
 }
 
 
 void
-JoystickListWindow::handle(const sdl::events::event& e)
+JoystickListWindow::process_event(const sdl::events::event& e)
 {
     switch (sdl::events::type{e.type}) {
         using enum sdl::events::type;
@@ -95,7 +100,7 @@ JoystickListWindow::handle(const sdl::events::event& e)
 
     for (auto& [id, child] : children)
         if (child)
-            child->handle(e);
+            child->process_event(e);
 }
 
 

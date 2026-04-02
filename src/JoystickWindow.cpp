@@ -137,13 +137,18 @@ namespace {
 
 JoystickWindow::JoystickWindow(JoystickListWindow* parent,
                                sdl::joystick::instance_id id) :
+    Window{"Joystick" + std::to_string(id)},
     parent{parent},
     id{id},
     dev{sdl::joystick::device::from_id(id)}
 {
+    title = "Joystick: "s
+        + dev.try_get_name().value_or("")
+        + "##"s
+        + std::to_string(id);
+
     axis_histories.resize(dev.get_num_axes());
     ball_histories.resize(dev.get_num_balls());
-
 
     guid = dev.get_guid();
     auto [vendor_, product_, version_, crc16_] = sdl::joystick::parse(guid);
@@ -163,51 +168,63 @@ JoystickWindow::~JoystickWindow()
 
 
 void
-JoystickWindow::process()
+JoystickWindow::process_ui()
 {
     update_history();
 
-    ImGui::SetNextWindowSize({1000, 600}, ImGuiCond_Appearing);
-    std::string title = "Joystick: "s
-        + dev.try_get_name().value_or("")
-        + "##"s
-        + std::to_string(id);
+    ImGui::SetNextWindowSize({1000, 650}, ImGuiCond_Appearing);
+
     if (ImGui::Begin(title.data(), &is_open)) {
 
         ImGui::BeginTabBar("main_items");
 
         if (ImGui::BeginTabItem("Details")) {
-            show_details();
+            if (ImGui::BeginChild("details_child"))
+                show_details();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Axes")) {
-            show_axes();
+            if (ImGui::BeginChild("axes_child"))
+                show_axes();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Balls")) {
-            show_balls();
+            if (ImGui::BeginChild("balls_child"))
+                show_balls();
+            ImGui::EndChild();
+
             ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Hats")) {
+            if (ImGui::BeginChild("hats_child"))
             show_hats();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Buttons")) {
+            if (ImGui::BeginChild("buttons_child"))
             show_buttons();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Mapping")) {
-            show_mapping();
+            if (ImGui::BeginChild("mapping_child"))
+                show_mapping();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Extras")) {
-        show_extras();
+            if (ImGui::BeginChild("extras_child"))
+                show_extras();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 

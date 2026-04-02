@@ -39,8 +39,7 @@ PKG_CHECK_MODULES([SDL], [sdl2])
 
 
 AX_SUBDIRS_CONFIGURE([external/sdl2xx],
-                     [[--disable-shared],
-                      [--disable-examples],
+                     [[--disable-examples],
                       [--disable-mixer],
                       [--disable-image],
                       [--disable-ttf],
