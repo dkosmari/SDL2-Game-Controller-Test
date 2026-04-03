@@ -89,6 +89,12 @@ namespace App {
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(),
                                               res->renderer.data());
 
+#ifdef __WIIU__
+        // WORKAROUND: there's a bug where the clipping does not get updated until next draw.
+        res->renderer.set_color(sdl::color::transparent);
+        res->renderer.draw_point(0, 0);
+#endif
+
         res->renderer.present();
     }
 
@@ -111,6 +117,7 @@ namespace App {
         }
 
         // ImGui::ShowDemoWindow();
+        // ImGui::ShowStyleEditor();
 
         ImGui::EndFrame();
         ImGui::Render();
@@ -243,7 +250,7 @@ App::initialize()
 
     io.ConfigDragScroll = true;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
-    io.MouseDragThreshold = 25;
+    io.MouseDragThreshold = 15;
 
     auto& style = ImGui::GetStyle();
     style.ScaleAllSizes(3);

@@ -40,6 +40,8 @@ sdl2_gamecontroller_test_elf_SOURCES = \
 	src/JoystickWindow.cpp \
 	src/JoystickWindow.hpp \
 	src/main.cpp \
+	src/UI.cpp \
+	src/UI.hpp \
 	src/Window.cpp \
 	src/Window.hpp \
 	src/wiiu-stderr.cpp \
@@ -66,11 +68,11 @@ $(WUHB_FILE): $(RPX_FILE)
 		--author="Daniel K. O."
 
 
-run: $(WUHB_FILE)
+run: all
 	WIILOAD=tcp:wiiu wiiload $(WUHB_FILE)
 
 
-wiiu-install: $(WUHB_FILE)
+wiiu-install: all
 	curl --upload-file $(WUHB_FILE) "ftp://wiiu:/fs/vol/external01/wiiu/apps/"
 
 
@@ -82,7 +84,7 @@ all-local: $(WUHB_FILE)
 
 else !ENABLE_WIIU
 
-run: $(BIN_FILE)
+run: all
 	cd $(top_srcdir) && $(abs_builddir)/$(BIN_FILE)
 
 endif !ENABLE_WIIU

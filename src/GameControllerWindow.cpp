@@ -11,16 +11,10 @@
 #include "GameControllerWindow.hpp"
 
 #include "GameControllerListWindow.hpp"
+#include "UI.hpp"
 
 
 using namespace std::literals;
-
-
-namespace {
-
-    const ImVec4 key_color = {1.0, 1.0, 0.5, 1.0};
-
-}
 
 
 GameControllerWindow::GameControllerWindow(GameControllerListWindow* parent,
@@ -121,7 +115,7 @@ GameControllerWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Name");
+        UI::key_label("Name", true);
         ImGui::TableNextColumn();
         auto name = dev.try_get_name();
         if (name)
@@ -129,13 +123,13 @@ GameControllerWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "ID");
+        UI::key_label("ID", true);
         ImGui::TableNextColumn();
         ImGui::Text("%d", dev.get_id());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Path");
+        UI::key_label("Path", true);
         ImGui::TableNextColumn();
         auto path = dev.try_get_path();
         if (path)
@@ -143,7 +137,7 @@ GameControllerWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "VID:PID");
+        UI::key_label("VID:PID", true);
         ImGui::TableNextColumn();
         ImGui::Text("%04x:%04x (%04x)",
                     dev.get_vendor(),
@@ -152,13 +146,13 @@ GameControllerWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Firmware");
+        UI::key_label("Firmware", true);
         ImGui::TableNextColumn();
         ImGui::Text("%04x", dev.get_firmware());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Serial");
+        UI::key_label("Serial", true);
         ImGui::TableNextColumn();
         auto serial = dev.try_get_serial();
         if (serial)
@@ -166,14 +160,14 @@ GameControllerWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Type");
+        UI::key_label("Type", true);
         ImGui::TableNextColumn();
         auto type = dev.get_type();
         ImGui::Text("%s", to_string(type).data());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Player");
+        UI::key_label("Player", true);
         ImGui::TableNextColumn();
         {
             int p = dev.get_player();
@@ -183,7 +177,7 @@ GameControllerWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Mapping");
+        UI::key_label("Mapping", true);
         ImGui::TableNextColumn();
         if (auto mapping = dev.try_get_mapping())
             ImGui::TextWrapped("%s", mapping->data());
@@ -324,31 +318,21 @@ GameControllerWindow::show_buttons()
 {
     using sdl::game_controller::button;
 
-    if (ImGui::BeginTable("Buttons", 2)) {
+    auto& style = ImGui::GetStyle();
+    float item_width =
+        ImGui::CalcTextSize("rightshoulderA").x
+        + style.ItemSpacing.x
+        + ImGui::GetFrameHeight();
 
-        ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed);
-        ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthStretch);
+    if (ImGui::BeginChild("Buttons")) {
 
         for (unsigned i = 0; i < convert(button::max); ++i) {
             auto b = static_cast<button>(i);
             if (!dev.has_button(b))
                 continue;
 
-            ImGui::TableNextRow();
-            ImGui::PushID(i);
-
-            ImGui::TableNextColumn();
-            auto label = to_string(b);
-            ImGui::TextColored(key_color, "%s", label.data());
-
-            ImGui::TableNextColumn();
-            ImGui::BeginDisabled(true);
-            ImGui::RadioButton("", dev.get_button(b));
-            ImGui::EndDisabled();
-
-            ImGui::PopID();
+            UI::flow_radio_button(to_string(b), dev.get_button(b), item_width);
         }
-
-        ImGui::EndTable();
     }
+    ImGui::EndChild();
 }

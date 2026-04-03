@@ -16,6 +16,7 @@
 #include "JoystickWindow.hpp"
 
 #include "JoystickListWindow.hpp"
+#include "UI.hpp"
 
 
 using namespace std::literals;
@@ -27,8 +28,6 @@ using std::endl;
 namespace {
 
     const unsigned max_history_size = 60 * 5;
-
-    const ImVec4 key_color = {1.0, 1.0, 0.5, 1.0};
 
 
     sdl::vec2
@@ -247,7 +246,7 @@ JoystickWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Name");
+        UI::key_label("Name", true);
         ImGui::TableNextColumn();
         auto name = dev.try_get_name();
         if (name)
@@ -255,13 +254,13 @@ JoystickWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "ID");
+        UI::key_label("ID", true);
         ImGui::TableNextColumn();
         ImGui::Text("%d", dev.get_id());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Path");
+        UI::key_label("Path", true);
         ImGui::TableNextColumn();
         auto path = dev.try_get_path();
         if (path)
@@ -269,7 +268,7 @@ JoystickWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "VID:PID");
+        UI::key_label("VID:PID", true);
         ImGui::TableNextColumn();
         ImGui::Text("%04x:%04x (%04x)",
                     dev.get_vendor(),
@@ -278,13 +277,13 @@ JoystickWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Firmware");
+        UI::key_label("Firmware", true);
         ImGui::TableNextColumn();
         ImGui::Text("%04x", dev.get_firmware());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Serial");
+        UI::key_label("Serial", true);
         ImGui::TableNextColumn();
         auto serial = dev.try_get_serial();
         if (serial)
@@ -292,20 +291,20 @@ JoystickWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Type");
+        UI::key_label("Type", true);
         ImGui::TableNextColumn();
         auto type = dev.get_type();
         ImGui::Text("%s", to_string(type).data());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "GUID");
+        UI::key_label("GUID", true);
         ImGui::TableNextColumn();
         ImGui::Text("%s", to_string(guid).data());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Player");
+        UI::key_label("Player", true);
         ImGui::TableNextColumn();
         {
             int p = dev.get_player();
@@ -315,7 +314,7 @@ JoystickWindow::show_details()
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Battery");
+        UI::key_label("Battery", true);
         ImGui::TableNextColumn();
         auto power = dev.get_power_level();
         ImGui::Text("%s", to_string(power).data());
@@ -461,30 +460,30 @@ JoystickWindow::show_buttons()
     if (dev.get_num_buttons() == 0)
         return;
 
-    ImGui::BeginDisabled(true);
+    auto& style = ImGui::GetStyle();
+    float item_width =
+        ImGui::CalcTextSize("000").x
+        + style.ItemSpacing.x
+        + ImGui::GetFrameHeight();
 
-    const unsigned n_columns = 8;
-    const unsigned n_buttons = dev.get_num_buttons();
+    unsigned n_buttons = dev.get_num_buttons();
 
-    if (ImGui::BeginTable("Buttons", n_columns)) {
-        for (unsigned i = 0; i < n_buttons; ++i) {
-            std::string label = std::to_string(i);
-            bool value = dev.get_button(i);
-            ImGui::TableNextColumn();
-            ImGui::RadioButton(label.data(), value);
-        }
-
-        ImGui::EndTable();
+    if (ImGui::BeginChild("Buttons")) {
+        ImGui::PushStyleVar(ImGuiStyleVar_DisabledAlpha, 1.0f);
+        ImGui::BeginDisabled(true);
+        for (unsigned i = 0; i < n_buttons; ++i)
+            UI::flow_radio_button(std::to_string(i), dev.get_button(i), item_width);
+        ImGui::EndDisabled();
+        ImGui::PopStyleVar(1);
     }
-
-    ImGui::EndDisabled();
+    ImGui::EndChild();
 }
 
 
 void
 JoystickWindow::show_extras()
 {
-    ImGui::TextColored(key_color, "Rumble");
+    UI::key_label("Rumble");
     ImGui::Indent();
     ImGui::BeginDisabled(!dev.has_rumble());
     if (ImGui::Button("Low Freq"))
@@ -506,7 +505,7 @@ JoystickWindow::show_extras()
     ImGui::Separator();
 
     // Show LED
-    ImGui::TextColored(key_color, "LED");
+    UI::key_label("LED");
     ImGui::Indent();
     ImGui::BeginDisabled(!dev.has_led());
     {
@@ -536,14 +535,14 @@ JoystickWindow::show_mapping()
         // GUID
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "GUID");
+        UI::key_label("GUID", true);
         ImGui::TableNextColumn();
         ImGui::Text("%s", to_string(guid).data());
 
         // Name
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "name");
+        UI::key_label("name", true);
         ImGui::TableNextColumn();
         ImGui::PushItemWidth(-FLT_MIN);
         ImGui::InputText("##name", &mapping["name"]);
@@ -552,14 +551,14 @@ JoystickWindow::show_mapping()
         // Platform
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "Platform");
+        UI::key_label("Platform", true);
         ImGui::TableNextColumn();
         ImGui::Text("%s", SDL_GetPlatform());
 
         // CRC16
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextColored(key_color, "crc");
+        UI::key_label("crc", true);
         ImGui::TableNextColumn();
         ImGui::Text("%04x", crc);
         ImGui::SameLine();
@@ -582,7 +581,7 @@ JoystickWindow::show_mapping()
             ImGui::TableNextColumn();
             auto dst = to_string(a);
             ImGui::PushID(dst.data());
-            ImGui::TextColored(key_color, "%s", dst.data());
+            UI::key_label(dst, true);
 
             ImGui::TableNextColumn();
             std::string src;
@@ -604,7 +603,7 @@ JoystickWindow::show_mapping()
             ImGui::TableNextColumn();
             auto dst = to_string(b);
             ImGui::PushID(dst.data());
-            ImGui::TextColored(key_color, "%s", dst.data());
+            UI::key_label(dst, true);
 
             ImGui::TableNextColumn();
             std::string src;
