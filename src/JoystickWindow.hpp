@@ -1,5 +1,12 @@
-#ifndef JOYSTICKWINDOW_HPP
-#define JOYSTICKWINDOW_HPP
+/*
+ * SDL2 Game Controller Test - a tool to visualize SDL2 game input devices.
+ * Copyright (C) 2026  Daniel K. O. <dkosmari>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#ifndef JOYSTICK_WINDOW_HPP
+#define JOYSTICK_WINDOW_HPP
 
 #include <map>
 #include <string>

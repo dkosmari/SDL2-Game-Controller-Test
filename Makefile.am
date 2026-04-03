@@ -1,3 +1,10 @@
+EXTRA_DIST = \
+	assets \
+	bootstrap \
+	COPYING.GPLv3 \
+	README.md
+
+
 SUBDIRS = external
 
 

@@ -62,10 +62,6 @@ implot_libimplot_la_CPPFLAGS += -Dtimegm=mktime
 endif ENABLE_WIIU
 
 
-
-
-
-
 .PHONY: company
 company: compile_flags.txt
 
