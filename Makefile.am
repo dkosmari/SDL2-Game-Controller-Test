@@ -70,7 +70,7 @@ $(WUHB_FILE): $(RPX_FILE)
 	$(WUHBTOOL) \
 		$< $@ \
 		--content=$(srcdir)/assets/content \
-		--name="$(PACKAGE_NAME)" \
+		--name="$(PACKAGE_STRING)" \
 		--short-name="$(PACKAGE)" \
 		--author="Daniel K. O."
 

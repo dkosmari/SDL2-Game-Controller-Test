@@ -59,7 +59,7 @@ namespace App {
 #endif
 
 
-        sdl::window window{PACKAGE_NAME,
+        sdl::window window{PACKAGE_STRING,
                            sdl::window::pos_undefined,
                            {1280, 720},
                            sdl::window::flag::resizable};
