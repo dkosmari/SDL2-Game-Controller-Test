@@ -337,16 +337,15 @@ JoystickWindow::show_axes()
     if (axis_histories.empty())
         return;
 
-    if (ImPlot::BeginPlot("Axes", {-1, -1}, ImPlotFlags_NoInputs)) {
+    if (ImPlot::BeginPlot("##Axes", {-1, -1}, ImPlotFlags_NoInputs)) {
 
-        ImPlot::SetupAxes("Time", "Value",
-                          ImPlotAxisFlags_RangeFit
-                          | ImPlotAxisFlags_NoLabel
-                          | ImPlotAxisFlags_NoTickLabels,
+        ImPlot::SetupAxes("Frame", "Value",
+                          ImPlotAxisFlags_None,
                           ImPlotAxisFlags_RangeFit);
-        ImPlot::SetupAxesLimits(0, max_history_size - 1,
+        ImPlot::SetupAxesLimits(1.0 - max_history_size, 0.0,
                                 -1.1, 1.1,
                                 ImPlotCond_Always);
+        ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
         ImPlot::SetupFinish();
 
         for (unsigned i = 0; i < dev.get_num_axes(); ++i) {
@@ -354,12 +353,13 @@ JoystickWindow::show_axes()
             if (!history.empty()) {
                 std::string label = "Axis " + std::to_string(i);
                 ImPlotSpec spec;
-                spec.LineWeight = 4.0f;
+                spec.LineWeight = 2.0f;
+                spec.Stride = sizeof history[0];
                 ImPlot::PlotLine(label.data(),
                                  &history[0],
                                  history.size(),
                                  1.0,
-                                 0.0,
+                                 1.0 - max_history_size,
                                  spec);
             }
         }
@@ -375,7 +375,7 @@ JoystickWindow::show_balls()
     if (ball_histories.empty())
         return;
 
-    if (ImPlot::BeginPlot("Balls", {-1, -1}, ImPlotFlags_NoInputs)) {
+    if (ImPlot::BeginPlot("##Balls", {-1, -1}, ImPlotFlags_NoInputs)) {
 
         ImPlot::SetupAxes("X", "Y",
                           ImPlotAxisFlags_AutoFit,
@@ -388,7 +388,7 @@ JoystickWindow::show_balls()
                 std::string label = "Ball " + std::to_string(i);
                 ImPlotSpec spec;
                 spec.Stride = sizeof history[0];
-                spec.LineWeight = 4.0f;
+                spec.LineWeight = 2.0f;
                 ImPlot::PlotLine(label.data(),
                                  &history[0].x,
                                  &history[0].y,
@@ -415,7 +415,7 @@ JoystickWindow::show_hats()
     if (dev.get_num_hats() == 0)
         return;
 
-    if (ImPlot::BeginPlot("Hats", {-1, -1}, ImPlotFlags_NoInputs)) {
+    if (ImPlot::BeginPlot("##Hats", {-1, -1}, ImPlotFlags_NoInputs)) {
 
         auto flags =
             ImPlotAxisFlags_RangeFit |

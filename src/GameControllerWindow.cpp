@@ -8,6 +8,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <numbers>
 #include <string>
 
 #include <imgui.h>
@@ -194,56 +195,68 @@ GameControllerWindow::show_details()
 }
 
 
+template<std::size_t N>
+static
+std::array<sdl::vec2f, N>
+make_circle(double radius)
+{
+    std::array<sdl::vec2f, N> result;
+    for (std::size_t i = 0; i < N; ++i) {
+        float angle = 2 * i * std::numbers::pi_v<float> / N;
+        result[i] = radius * sdl::vec2f{ std::cos(angle), std::sin(angle) };
+    }
+    return result;
+}
+
+
 void
 GameControllerWindow::show_sticks()
 {
     using sdl::game_controller::axis;
 
-    auto available = ImGui::GetContentRegionAvail();
-    float size = std::min(available.x, available.y);
-    ImGui::SetCursorPosX((available.x - size) / 2);
-    if (ImPlot::BeginPlot("Sticks", {size, size}, ImPlotFlags_NoInputs)) {
+    if (ImPlot::BeginPlot("##Sticks", {-1, -1},
+                          ImPlotFlags_NoInputs | ImPlotFlags_Equal)) {
 
+        double axis_limit = 1.1;
+        ImPlot::SetupAxisLimits(ImAxis_X1, -axis_limit, +axis_limit);
+        // ImPlot::SetupAxisLimits(ImAxis_Y1, -axis_limit, +axis_limit, ImPlotCond_Always);
         ImPlotAxisFlags axis_flags = 0;
         axis_flags |= ImPlotAxisFlags_RangeFit;
         axis_flags |= ImPlotAxisFlags_NoLabel;
-        axis_flags |= ImPlotAxisFlags_NoTickLabels;
-
         ImPlot::SetupAxes("X", "Y", axis_flags, axis_flags);
-
-        double axis_limit = 1.1;
-        ImPlot::SetupAxesLimits(-axis_limit, axis_limit,
-                                -axis_limit, axis_limit,
-                                ImPlotCond_Always);
+        ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+        ImPlot::SetupFinish();
 
         // draw deadzone
         {
-            using sdl::vec2f;
-            static const float dz = sdl::game_controller::axis_dead_zone;
-            static const float ddz = dz * std::sqrt(2.0f) / 2.0f;
-            static const std::array<vec2f, 9> points{
-                vec2f{dz, 0},
-                vec2f{ddz, ddz},
-                vec2f{0, dz},
-                vec2f{-ddz, ddz},
-                vec2f{-dz, 0},
-                vec2f{-ddz, -ddz},
-                vec2f{0, -dz},
-                vec2f{ddz, -ddz},
-                vec2f{dz, 0}
-            };
+            static const auto dz_points = make_circle<32>(sdl::game_controller::axis_dead_zone);
             ImPlotSpec spec;
-            spec.Stride = sizeof(vec2f);
-            spec.LineWeight = 4.0f;
-            ImPlot::PlotLine("Deadzone",
-                             &points[0].x,
-                             &points[0].y,
-                             points.size(),
-                             spec);
+            spec.Stride = sizeof dz_points[0];
+            spec.LineWeight = 2.0f;
+            spec.FillAlpha = 0.20f;
+            ImPlot::PlotPolygon("Deadzone",
+                                &dz_points[0].x,
+                                &dz_points[0].y,
+                                dz_points.size(),
+                                spec);
+        }
+
+        // draw limit
+        {
+            static const auto range_points = make_circle<32>(1);
+            ImPlotSpec spec;
+            spec.Stride = sizeof range_points[0];
+            spec.LineWeight = 2.0f;
+            spec.FillAlpha = 0.0f;
+            ImPlot::PlotPolygon("Range",
+                                &range_points[0].x,
+                                &range_points[0].y,
+                                range_points.size(),
+                                spec);
         }
 
 
-        plot_stick("Left", axis::left_x, axis::left_y);
+        plot_stick("Left",  axis::left_x, axis::left_y);
         plot_stick("Right", axis::right_x, axis::right_y);
 
         ImPlot::EndPlot();
@@ -273,14 +286,16 @@ GameControllerWindow::show_triggers()
     using sdl::game_controller::axis;
 
     if (ImPlot::BeginPlot("Triggers", {-1, 0}, ImPlotFlags_NoInputs)) {
-
-        ImPlotAxisFlags axis_flags = 0;
-        axis_flags |= ImPlotAxisFlags_RangeFit;
-        axis_flags |= ImPlotAxisFlags_NoLabel;
-        axis_flags |= ImPlotAxisFlags_NoTickLabels;
-
-        ImPlot::SetupAxes("Trigger", "Value", axis_flags, axis_flags);
+        ImPlot::SetupAxes("Trigger", "Value",
+                          ImPlotAxisFlags_RangeFit
+                          | ImPlotAxisFlags_NoLabel
+                          | ImPlotAxisFlags_NoTickLabels
+                          | ImPlotAxisFlags_NoGridLines
+                          | ImPlotAxisFlags_NoTickMarks,
+                          ImPlotAxisFlags_RangeFit);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -0.1, 1.1);
+        ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+        ImPlot::SetupFinish();
 
         double values[2] = {0, 0};
         if (dev.has_axis(axis::trigger_left))
@@ -332,7 +347,8 @@ GameControllerWindow::show_buttons()
         + ImGui::GetFrameHeight();
 
     if (ImGui::BeginChild("Buttons")) {
-
+        ImGui::PushStyleVar(ImGuiStyleVar_DisabledAlpha, 1.0f);
+        ImGui::BeginDisabled(true);
         for (unsigned i = 0; i < convert(button::max); ++i) {
             auto b = static_cast<button>(i);
             if (!dev.has_button(b))
@@ -340,6 +356,8 @@ GameControllerWindow::show_buttons()
 
             UI::flow_radio_button(to_string(b), dev.get_button(b), item_width);
         }
+        ImGui::EndDisabled();
+        ImGui::PopStyleVar(1);
     }
     ImGui::EndChild();
 }

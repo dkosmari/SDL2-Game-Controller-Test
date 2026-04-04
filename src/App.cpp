@@ -252,11 +252,19 @@ App::initialize()
     io.ConfigWindowsMoveFromTitleBarOnly = true;
     io.MouseDragThreshold = 15;
 
-    auto& style = ImGui::GetStyle();
-    style.ScaleAllSizes(3);
+    {
+        auto& style = ImGui::GetStyle();
+        style.ScaleAllSizes(3);
+    }
 
     auto font_path = get_content_path() / "DejaVuSans.ttf";
     io.Fonts->AddFontFromFileTTF(font_path.c_str(), 30);
+
+    {
+        auto& style = ImPlot::GetStyle();
+        style.Colormap = ImPlotColormap_Deep;
+        // style.Colormap = ImPlotColormap_Dark;
+    }
 
     ImGui_ImplSDL2_InitForSDLRenderer(res->window.data(),
                                       res->renderer.data());

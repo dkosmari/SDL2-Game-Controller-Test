@@ -37,12 +37,11 @@ struct JoystickWindow : Window {
     bool is_open = true;
 
 
-    using axis_samples_t = std::vector<double>;
-    std::vector<axis_samples_t> axis_histories;
+    using AxisSampleVec = std::vector<double>;
+    std::vector<AxisSampleVec> axis_histories;
 
-
-    using ball_samples_t = std::vector<sdl::vec2>;
-    std::vector<ball_samples_t> ball_histories;
+    using BallSampleVec = std::vector<sdl::vec2>;
+    std::vector<BallSampleVec> ball_histories;
 
 
     JoystickWindow(JoystickListWindow* parent,
