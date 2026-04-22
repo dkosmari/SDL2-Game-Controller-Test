@@ -6,6 +6,7 @@
  */
 
 #include <imgui.h>
+#include <imgui_stdlib.h>
 
 #include "UI.hpp"
 
@@ -50,7 +51,7 @@ namespace UI {
         // else if (child_flags & ImGuiChildFlags_Borders)
         //     border = style.ChildBorderSize;
 
-        auto label_size = ImGui::CalcTextSize(label.data(), nullptr, true);
+        auto label_size = ImGui::CalcTextSize(label, true);
         float checkbox_size = ImGui::GetFrameHeight();
 
         float content_width =
@@ -66,7 +67,7 @@ namespace UI {
         float cur_x = ImGui::GetCursorScreenPos().x;
         float max_x = cur_x + available.x;
 
-        if (ImGui::BeginChild(label.data(), {content_width, 0}, child_flags)) {
+        if (ImGui::BeginChild(label, {content_width, 0}, child_flags)) {
             auto available = ImGui::GetContentRegionAvail();
             ImGui::SetCursorPosX(available.x - label_size.x - checkbox_size - style.ItemSpacing.x);
             key_label(label, true);

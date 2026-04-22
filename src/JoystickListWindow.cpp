@@ -6,6 +6,7 @@
  */
 
 #include <imgui.h>
+#include <imgui_stdlib.h>
 
 #include "JoystickListWindow.hpp"
 
@@ -29,7 +30,7 @@ JoystickListWindow::process_ui()
     auto vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos({10, 10}, ImGuiCond_Appearing);
     ImGui::SetNextWindowSize({vp->Size.x - 20, vp->Size.y/2 - 20}, ImGuiCond_Appearing);
-    if (ImGui::Begin(title.data())) {
+    if (ImGui::Begin(title)) {
 
         ImGui::BeginTable("joystick_list", 5);
 

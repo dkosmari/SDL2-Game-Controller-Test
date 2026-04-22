@@ -12,6 +12,7 @@
 #include <string>
 
 #include <imgui.h>
+#include <imgui_stdlib.h>
 #include <implot.h>
 
 #include <sdl2xx/vec2.hpp>
@@ -70,7 +71,7 @@ void
 GameControllerWindow::process_ui()
 {
     ImGui::SetNextWindowSize({1000, 650}, ImGuiCond_Appearing);
-    if (ImGui::Begin(title.data(), &is_open)) {
+    if (ImGui::Begin(title, &is_open)) {
 
         ImGui::BeginTabBar("main_items");
 
@@ -171,7 +172,7 @@ GameControllerWindow::show_details()
         UI::key_label("Type", true);
         ImGui::TableNextColumn();
         auto type = dev.get_type();
-        ImGui::Text("%s", to_string(type).data());
+        ImGui::Text(to_string(type));
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();

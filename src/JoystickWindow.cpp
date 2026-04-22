@@ -14,7 +14,7 @@
 #include <SDL_timer.h>
 
 #include <imgui.h>
-#include <misc/cpp/imgui_stdlib.h>
+#include <imgui_stdlib.h>
 #include <implot.h>
 
 #include <sdl2xx/clipboard.hpp>
@@ -180,7 +180,7 @@ JoystickWindow::process_ui()
 
     ImGui::SetNextWindowSize({1000, 650}, ImGuiCond_Appearing);
 
-    if (ImGui::Begin(title.data(), &is_open)) {
+    if (ImGui::Begin(title, &is_open)) {
 
         ImGui::BeginTabBar("main_items");
 
@@ -301,13 +301,13 @@ JoystickWindow::show_details()
         UI::key_label("Type", true);
         ImGui::TableNextColumn();
         auto type = dev.get_type();
-        ImGui::Text("%s", to_string(type).data());
+        ImGui::Text(to_string(type));
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         UI::key_label("GUID", true);
         ImGui::TableNextColumn();
-        ImGui::Text("%s", to_string(guid).data());
+        ImGui::Text(to_string(guid));
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -324,7 +324,7 @@ JoystickWindow::show_details()
         UI::key_label("Battery", true);
         ImGui::TableNextColumn();
         auto power = dev.get_power_level();
-        ImGui::Text("%s", to_string(power).data());
+        ImGui::Text(to_string(power));
 
         ImGui::EndTable();
     }
@@ -544,7 +544,7 @@ JoystickWindow::show_mapping()
         ImGui::TableNextColumn();
         UI::key_label("GUID", true);
         ImGui::TableNextColumn();
-        ImGui::Text("%s", to_string(guid).data());
+        ImGui::Text(to_string(guid));
 
         // Name
         ImGui::TableNextRow();
@@ -552,7 +552,7 @@ JoystickWindow::show_mapping()
         UI::key_label("name", true);
         ImGui::TableNextColumn();
         ImGui::PushItemWidth(-FLT_MIN);
-        ImGui::InputText("##name", &mapping["name"]);
+        ImGui::InputText("##name"s, mapping["name"]);
         ImGui::PopItemWidth();
 
         // Platform
@@ -587,7 +587,7 @@ JoystickWindow::show_mapping()
 
             ImGui::TableNextColumn();
             auto dst = to_string(a);
-            ImGui::PushID(dst.data());
+            ImGui::PushID(dst);
             UI::key_label(dst, true);
 
             ImGui::TableNextColumn();
@@ -609,7 +609,7 @@ JoystickWindow::show_mapping()
 
             ImGui::TableNextColumn();
             auto dst = to_string(b);
-            ImGui::PushID(dst.data());
+            ImGui::PushID(dst);
             UI::key_label(dst, true);
 
             ImGui::TableNextColumn();
@@ -673,7 +673,7 @@ JoystickWindow::show_mapping()
     if (ImGui::Button("Copy"))
         sdl::clipboard::set_text(mapping_str);
 
-    ImGui::TextWrapped("%s", mapping_str.data());
+    ImGui::TextWrapped(mapping_str);
 }
 
 
@@ -685,7 +685,7 @@ JoystickWindow::show_inputs_combo(const std::string& dst,
     using std::string;
 
     ImGui::PushItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##Joystick inputs", src_label.data())) {
+    if (ImGui::BeginCombo("##Joystick inputs", src_label)) {
         // Special: <NONE>
         if (ImGui::Selectable("<NONE>", src.empty()))
             mapping.erase(dst);
@@ -695,7 +695,7 @@ JoystickWindow::show_inputs_combo(const std::string& dst,
             string name = "a" + std::to_string(i);
             bool selected = src == name;
             string label = name + " (" + get_input(name) + ")";
-            if (ImGui::Selectable(label.data(), selected))
+            if (ImGui::Selectable(label, selected))
                 mapping[dst] = name;
         }
 
@@ -704,7 +704,7 @@ JoystickWindow::show_inputs_combo(const std::string& dst,
             string name = "b" + std::to_string(i);
             bool selected = src == name;
             string label = name + " (" + get_input(name) + ")";
-            if (ImGui::Selectable(label.data(), selected))
+            if (ImGui::Selectable(label, selected))
                 mapping[dst] = name;
         }
 
@@ -725,7 +725,7 @@ JoystickWindow::show_inputs_combo(const std::string& dst,
                     + "." + std::to_string(static_cast<unsigned>(d));
                 bool selected = src == name;
                 string label = name + " (" + get_input(name) + ")";
-                if (ImGui::Selectable(label.data(), selected))
+                if (ImGui::Selectable(label, selected))
                     mapping[dst] = name;
             }
         }

@@ -19,6 +19,7 @@ AM_CPPFLAGS = \
 	$(FT_CFLAGS) \
 	-I$(srcdir)/external/sdl2xx/include \
 	-I$(srcdir)/external/imgui \
+	-I$(srcdir)/external/imgui/misc/cpp \
 	-I$(srcdir)/external/implot \
 	-DIMGUI_USER_CONFIG='"$(srcdir)/external/custom_imconfig.h"'
 
