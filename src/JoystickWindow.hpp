@@ -8,6 +8,7 @@
 #ifndef JOYSTICK_WINDOW_HPP
 #define JOYSTICK_WINDOW_HPP
 
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -42,6 +43,9 @@ struct JoystickWindow : Window {
 
     using BallSampleVec = std::vector<sdl::vec2>;
     std::vector<BallSampleVec> ball_histories;
+
+    using ButtonSampleVec = std::vector<std::uint8_t>;
+    std::vector<ButtonSampleVec> button_histories;
 
 
     JoystickWindow(JoystickListWindow* parent,

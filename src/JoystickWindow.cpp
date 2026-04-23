@@ -155,6 +155,7 @@ JoystickWindow::JoystickWindow(JoystickListWindow* parent,
 
     axis_histories.resize(dev.get_num_axes());
     ball_histories.resize(dev.get_num_balls());
+    button_histories.resize(dev.get_num_buttons());
 
     guid = dev.get_guid();
     auto [vendor_, product_, version_, crc16_] = sdl::joystick::parse(guid);
@@ -475,7 +476,9 @@ JoystickWindow::show_buttons()
 
     unsigned n_buttons = dev.get_num_buttons();
 
-    if (ImGui::BeginChild("Buttons")) {
+    if (ImGui::BeginChild("Buttons",
+                          {0, 0},
+                          ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeY)) {
         ImGui::PushStyleVar(ImGuiStyleVar_DisabledAlpha, 1.0f);
         ImGui::BeginDisabled(true);
         for (unsigned i = 0; i < n_buttons; ++i)
@@ -484,6 +487,36 @@ JoystickWindow::show_buttons()
         ImGui::PopStyleVar(1);
     }
     ImGui::EndChild();
+
+    if (ImPlot::BeginPlot("##Buttons", {-1, -1}, ImPlotFlags_NoInputs)) {
+
+        ImPlot::SetupAxes("Frame", "Value",
+                          ImPlotAxisFlags_None,
+                          ImPlotAxisFlags_RangeFit);
+        ImPlot::SetupAxesLimits(1.0 - max_history_size, 0.0,
+                                -0.1, 1.1,
+                                ImPlotCond_Always);
+        ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+        ImPlot::SetupFinish();
+
+        for (unsigned i = 0; i < dev.get_num_buttons(); ++i) {
+            auto& history = button_histories[i];
+            if (!history.empty()) {
+                std::string label = std::to_string(i);
+                ImPlotSpec spec;
+                spec.LineWeight = 2.0f;
+                spec.Stride = sizeof history[0];
+                ImPlot::PlotLine(label.data(),
+                                 &history[0],
+                                 history.size(),
+                                 1.0,
+                                 1.0 - max_history_size,
+                                 spec);
+            }
+        }
+
+        ImPlot::EndPlot();
+    }
 }
 
 
@@ -776,6 +809,14 @@ JoystickWindow::update_history()
     for (unsigned i = 0; i < dev.get_num_balls(); ++i) {
         auto value = dev.get_ball(i);
         auto& history = ball_histories[i];
+        if (history.size() >= max_history_size)
+            history.erase(history.begin());
+        history.push_back(value);
+    }
+
+    for (unsigned i = 0; i < dev.get_num_buttons(); ++i) {
+        auto value = dev.get_button(i) ? 1 : 0;
+        auto& history = button_histories[i];
         if (history.size() >= max_history_size)
             history.erase(history.begin());
         history.push_back(value);
