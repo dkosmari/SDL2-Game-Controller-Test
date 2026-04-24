@@ -83,7 +83,7 @@ namespace App {
     draw()
     {
 
-        res->renderer.set_color(0x402040_rgb);
+        res->renderer.set_color(0x502040_rgb);
         res->renderer.clear();
 
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(),

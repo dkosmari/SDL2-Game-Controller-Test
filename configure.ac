@@ -2,7 +2,11 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.71])
-AC_INIT([SDL2 Game Controller Test], [0.0], [])
+AC_INIT([SDL2 Game Controller Test],
+        [1.0],
+        [https://github.com/dkosmari/SDL2-Game-Controller-Test/issues],
+        [],
+        [https://github.com/dkosmari/SDL2-Game-Controller-Test])
 AC_CONFIG_SRCDIR([src/main.cpp])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
