@@ -31,12 +31,12 @@ LDADD = \
 	$(FT_LIBS)
 
 
-BIN_FILE := sdl2-gamecontroller-test.elf
+ELF_FILE := sdl2-game-controller-test.elf
 
 
-bin_PROGRAMS = $(BIN_FILE)
+bin_PROGRAMS = $(ELF_FILE)
 
-sdl2_gamecontroller_test_elf_SOURCES = \
+sdl2_game_controller_test_elf_SOURCES = \
 	src/App.cpp \
 	src/App.hpp \
 	src/GameControllerListWindow.cpp \
@@ -64,7 +64,7 @@ if ENABLE_WIIU
 # FIX: implot wants to use timegm
 AM_CPPFLAGS += -Dtimegm=mktime
 
-RPX_FILE  = $(BIN_FILE:.elf=.rpx)
+RPX_FILE  = $(ELF_FILE:.elf=.rpx)
 WUHB_FILE = $(RPX_FILE:.rpx=.wuhb)
 
 $(WUHB_FILE): $(RPX_FILE)
@@ -96,7 +96,7 @@ all-local: $(WUHB_FILE)
 else !ENABLE_WIIU
 
 run: all
-	cd $(top_srcdir) && $(abs_builddir)/$(BIN_FILE)
+	cd $(top_srcdir) && $(abs_builddir)/$(ELF_FILE)
 
 endif !ENABLE_WIIU
 
