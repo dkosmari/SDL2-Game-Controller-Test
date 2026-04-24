@@ -73,7 +73,10 @@ $(WUHB_FILE): $(RPX_FILE)
 		--content=$(srcdir)/assets/content \
 		--name="$(PACKAGE_STRING)" \
 		--short-name="$(PACKAGE)" \
-		--author="Daniel K. O."
+		--author="Daniel K. O." \
+		--icon=$(srcdir)/assets/wuhb/icon.png \
+		--tv-image=$(srcdir)/assets/wuhb/splash-image-tv.png \
+		--drc-image=$(srcdir)/assets/wuhb/splash-image-drc.png
 
 
 run: all
