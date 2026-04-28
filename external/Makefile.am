@@ -1,3 +1,5 @@
+EXTRA_DIST = update-submodules.sh
+
 SUBDIRS = sdl2xx
 
 
