@@ -1,9 +1,20 @@
 # SDL2 Game Controller Test
 
+<p align="center">
+    <a href="https://hb-app.store/wiiu/SDL2GameControllerTest">
+        <img src="assets/hbas/hbasbadge-wiiu.png" width="335" height="96">
+    </a>
+</p>
+
 This is a simple application to visualize and test SDL2 game controllers.
 
 Both the "Joystick" and "GameController" interfaces are accessible.
 
+
+![Screenshot 1](assets/hbas/screenshot-1.png)
+![Screenshot 2](assets/hbas/screenshot-2.png)
+![Screenshot 3](assets/hbas/screenshot-3.png)
+![Screenshot 4](assets/hbas/screenshot-4.png)
 
 
 ## Compiling from sources
